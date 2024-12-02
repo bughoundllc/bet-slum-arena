@@ -1,5 +1,6 @@
 using UnityEngine;
 using UnityEngine.AI;
+using UnityEngine.Events;
 
 namespace bet_slum.CombatArena
 {
@@ -14,13 +15,32 @@ namespace bet_slum.CombatArena
         [SerializeField] private float _attackCooldown = 1f;
         [SerializeField] private float _stoppingDistance = 1f;
 
-        public void Initialize()
+        public float HP { get { return _HP; } }
+        private float _HP;
+        private float _MaxHP = 100;
+        private float _AttackDamage = 25f;
+
+
+        public void Initialize(Vector3 initialPosition, Quaternion initialRotation)
         {
+            _HP = _MaxHP;
+            transform.position = initialPosition;
+            transform.rotation = initialRotation;
         }
 
-        public void StartMatch()
+        public void Activate()
         {
             _active = true;
+        }
+
+        public void Deactivate()
+        {
+            _active = false;
+        }
+
+        public void TakeDamage(float amount)
+        {
+            _HP = Mathf.Clamp(_HP - amount, 0f, _MaxHP);
         }
 
         private void Update()
@@ -53,7 +73,7 @@ namespace bet_slum.CombatArena
                     {
                         if (hit.transform.gameObject == gameObject) continue;
                         if (!hit.transform.TryGetComponent<CombatAgent>(out var enemyAgent)) return;
-                        Debug.Log($"{gameObject.name} hit {enemyAgent.gameObject.name}");
+                        enemyAgent.TakeDamage(_AttackDamage);
                     }
                 }
             }

@@ -9,7 +9,7 @@ namespace bet_slum
         private const string AuthorizationHeaderKey = "Cookie";
         private static string _sessionToken = "";
 
-        private const string _baseURL = "https://localhost:7208";
+        private const string _baseURL = "http://34.174.66.135:5000";
         private static string _apiURL = $"{_baseURL}/api";
 
         public struct ResponseData
@@ -18,9 +18,9 @@ namespace bet_slum
             public Dictionary<string, string> Headers;
         }
 
-        public static async Awaitable<ResponseData> POST(string endpoint, WWWForm body)
+        public static async Awaitable<ResponseData> POST(string controller, string endpoint, WWWForm body)
         {
-            using(UnityWebRequest request = UnityWebRequest.Post($"{_apiURL}/game/{endpoint}", body))
+            using(UnityWebRequest request = UnityWebRequest.Post($"{_apiURL}/{controller}/{endpoint}", body))
             {
                 request.SetRequestHeader(AuthorizationHeaderKey, _sessionToken);
                 await request.SendWebRequest();
@@ -32,9 +32,9 @@ namespace bet_slum
             }
         }
 
-        public static async Awaitable<ResponseData> GET(string url)
+        public static async Awaitable<ResponseData> GET(string controller, string endpoint)
         {
-            using(var request = UnityWebRequest.Get(url))
+            using(var request = UnityWebRequest.Get($"{_apiURL}/{controller}/{endpoint}"))
             {
                 request.SetRequestHeader(AuthorizationHeaderKey, _sessionToken);
                 await request.SendWebRequest();
