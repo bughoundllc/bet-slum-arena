@@ -20,14 +20,17 @@ namespace bet_slum
             await Initialize();
         }
 
+        private bool _betEndingFired = false;
         protected async void Update()
         {
-            if (_bettingEnabled)
+            if (_bettingEnabled && !_betEndingFired)
             {
                 if(Time.time - _lastBetPeriodStart > _bettingPeriodDuration)
                 {
+                    _betEndingFired = true;
                     await EndBettingPeriod();
                     StartRound();
+                    _betEndingFired = false;
                 }
             }
         }
@@ -35,7 +38,7 @@ namespace bet_slum
         protected virtual async Awaitable Initialize() 
         {
             await LoadGame();
-            InitializeMatch();
+            await InitializeMatch();
             await StartBettingPeriod();
         }
 
@@ -44,43 +47,36 @@ namespace bet_slum
             await SceneManager.LoadSceneAsync("CombatArena", LoadSceneMode.Additive);
         }
 
-        protected void InitializeMatch()
+        protected async Awaitable InitializeMatch()
         {
             Debug.Log("SR: Init Match");
             _matchRunner = FindAnyObjectByType<MatchRunner>();
-            _matchRunner.InitializeMatch(this);
+            await _matchRunner.InitializeMatch(this);
         }
 
-        protected async Awaitable StartBettingPeriod()
+        protected virtual async Awaitable StartBettingPeriod()
         {
             Debug.Log("SR: Starting Betting Period");
-            await NetworkController.GET("game", "open-bets");
             _lastBetPeriodStart = Time.time;
             _bettingEnabled = true;
         }
 
-        protected async Awaitable EndBettingPeriod()
+        protected virtual async Awaitable EndBettingPeriod()
         {
             Debug.Log("SR: Ending Betting Period");
-            await NetworkController.GET("game", "close-bets");
             _bettingEnabled = false;
         }
 
-        protected void StartRound()
+        protected virtual void StartRound()
         {
             Debug.Log("SR: Starting Round");
+
             _matchRunner.StartRound();
         }
 
-        public async Awaitable OnRoundEnd(int winnerID)
+        public virtual async Awaitable OnRoundEnd(int winnerID)
         {
-            Debug.Log("SR: Ending Round");
-            
-            var bodyForm = new WWWForm();
-            bodyForm.AddField("WinnerID", winnerID);
-            await NetworkController.POST("game", "payout-bets", bodyForm);
-
-            _matchRunner.InitializeRound();
+            await _matchRunner.InitializeRound();
             await StartBettingPeriod();
         }
     }

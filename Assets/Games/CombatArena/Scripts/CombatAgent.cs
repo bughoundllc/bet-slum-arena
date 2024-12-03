@@ -1,3 +1,4 @@
+using TMPro;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Events;
@@ -20,12 +21,15 @@ namespace bet_slum.CombatArena
         private float _MaxHP = 100;
         private float _AttackDamage = 25f;
 
+        // TODO - Move me
+        [SerializeField] private TMP_Text _nameDisplay;
 
         public void Initialize(Vector3 initialPosition, Quaternion initialRotation)
         {
             _HP = _MaxHP;
             transform.position = initialPosition;
             transform.rotation = initialRotation;
+            _nameDisplay.SetText(gameObject.name);
         }
 
         public void Activate()

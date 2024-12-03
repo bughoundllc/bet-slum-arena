@@ -15,6 +15,9 @@ namespace bet_slum.showRunner
         private const string GAME_CONTROLLER_EMAIL = "0de94eda24d841a09305140b73dae246@net.slum";
         private const string GAME_CONTROLLER_PW = "TnzS$gQLk5NveIen";
 
+        // prevent repeated calls while waiting on api
+        private bool _roundEnded = false;
+
         protected async override Awaitable Initialize()
         {
             await LoginToAPI();
@@ -40,6 +43,36 @@ namespace bet_slum.showRunner
             }
             else
                 throw new Exception("No auth token received from login");
+        }
+
+        protected async override Awaitable StartBettingPeriod()
+        {
+            await NetworkController.GET("game", "open-bets");
+            await base.StartBettingPeriod();
+        }
+
+        protected async override Awaitable EndBettingPeriod()
+        {
+            await NetworkController.GET("game", "close-bets");
+            await base.EndBettingPeriod();
+        }
+
+        protected override void StartRound()
+        {
+            _roundEnded = false;
+            base.StartRound();
+        }
+
+        public async override Awaitable OnRoundEnd(int winnerID)
+        {
+            if (_roundEnded) return;
+            _roundEnded = true;// prevent repeat calls while we wait for calls
+
+            var bodyForm = new WWWForm();
+            bodyForm.AddField("WinnerID", winnerID);
+            await NetworkController.POST("game", "payout-bets", bodyForm);
+
+            await base.OnRoundEnd(winnerID);
         }
     }
 }
