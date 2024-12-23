@@ -1,3 +1,5 @@
+using bet_slum.Data;
+using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -9,9 +11,15 @@ namespace bet_slum
     {
         private MatchRunner _matchRunner;
 
-        private float _bettingPeriodDuration = 15f;
+        // Need a better way of handling sequencing between rounds - we'll want this to be variable eventually, driven by some sequence to allow for live, variable duration, etc
+        [SerializeField] private float _bettingPeriodDuration = 15f;
+        [SerializeField] private float _postBettingStartDelaySeconds = 3f;
+        [SerializeField] private float _postRoundStartBettingDelay = 3f;
+        
         private bool _bettingEnabled = false;
         private float _lastBetPeriodStart;
+
+        private string _gameName;
 
         public float RemainingBetDuration => _bettingEnabled ? _bettingPeriodDuration - (Time.time - _lastBetPeriodStart): 0f;
 
@@ -29,34 +37,51 @@ namespace bet_slum
                 {
                     _betEndingFired = true;
                     await EndBettingPeriod();
+                    await Task.Delay((int)(_postBettingStartDelaySeconds * 1000));
                     StartRound();
                     _betEndingFired = false;
                 }
             }
         }
 
+        public void SetGame(string gameName)
+        {
+            _gameName = gameName;
+        }
+
         protected virtual async Awaitable Initialize() 
         {
-            await LoadGame();
+            await LoadGame(_gameName);
+            _matchRunner = FindAnyObjectByType<MatchRunner>();
+
+            await InitializeGame();
             await InitializeMatch();
             await StartBettingPeriod();
         }
 
-        protected async Awaitable LoadGame()
+        protected async Awaitable LoadGame(string name)
         {
-            await SceneManager.LoadSceneAsync("CombatArena", LoadSceneMode.Additive);
+            await SceneManager.LoadSceneAsync(name, LoadSceneMode.Single);
+        }
+
+        protected async Awaitable InitializeGame()
+        {
+            Debug.Log("SR: Init Game");
+
+            await _matchRunner.InitializeGameEnvironment(this);
         }
 
         protected async Awaitable InitializeMatch()
         {
             Debug.Log("SR: Init Match");
-            _matchRunner = FindAnyObjectByType<MatchRunner>();
-            await _matchRunner.InitializeMatch(this);
+
+            await _matchRunner.InitializeMatchEnvironment();
         }
 
         protected virtual async Awaitable StartBettingPeriod()
         {
             Debug.Log("SR: Starting Betting Period");
+
             _lastBetPeriodStart = Time.time;
             _bettingEnabled = true;
         }
@@ -64,6 +89,7 @@ namespace bet_slum
         protected virtual async Awaitable EndBettingPeriod()
         {
             Debug.Log("SR: Ending Betting Period");
+
             _bettingEnabled = false;
         }
 
@@ -71,12 +97,30 @@ namespace bet_slum
         {
             Debug.Log("SR: Starting Round");
 
-            _matchRunner.StartRound();
+            _matchRunner.StartMatch();
         }
 
-        public virtual async Awaitable OnRoundEnd(int winnerID)
+        // TODO - abtract to shared class lib
+        public class MatchCompetitorInfo
         {
-            await _matchRunner.InitializeRound();
+            public List<List<Competitor>> CompetitionTeams;
+        }
+
+        public virtual async Awaitable<MatchCompetitorInfo> GetCompetitors()
+        {
+            return new() {
+                CompetitionTeams = new()
+                {
+                    new List<Competitor>() {},
+                    new List<Competitor>() {}
+                }
+            };
+        }
+
+        public virtual async Awaitable OnMatchEnd(int winnerID)
+        {
+            await _matchRunner.InitializeMatchCompetitors();
+            await Task.Delay((int)(_postRoundStartBettingDelay * 1000));
             await StartBettingPeriod();
         }
     }

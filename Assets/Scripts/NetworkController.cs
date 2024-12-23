@@ -1,4 +1,6 @@
 using System.Collections.Generic;
+using Unity.VisualScripting.Antlr3.Runtime;
+using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -15,6 +17,7 @@ namespace bet_slum
         public struct ResponseData
         {
             public string Text;
+            public string? Error;
             public Dictionary<string, string> Headers;
         }
 
@@ -41,7 +44,8 @@ namespace bet_slum
                 return new()
                 {
                     Text = request.downloadHandler.text,
-                    Headers = request.GetResponseHeaders()
+                    Headers = request.GetResponseHeaders(),
+                    Error = request.error
                 };
             }
         }

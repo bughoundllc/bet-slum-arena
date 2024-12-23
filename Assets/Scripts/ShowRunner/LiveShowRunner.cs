@@ -1,4 +1,5 @@
 using Google.Cloud.SecretManager.V1;
+using Newtonsoft.Json;
 using System;
 using System.Threading.Tasks;
 using UnityEngine;
@@ -63,7 +64,7 @@ namespace bet_slum.showRunner
             base.StartRound();
         }
 
-        public async override Awaitable OnRoundEnd(int winnerID)
+        public async override Awaitable OnMatchEnd(int winnerID)
         {
             if (_roundEnded) return;
             _roundEnded = true;// prevent repeat calls while we wait for calls
@@ -72,7 +73,25 @@ namespace bet_slum.showRunner
             bodyForm.AddField("WinnerID", winnerID);
             await NetworkController.POST("game", "payout-bets", bodyForm);
 
-            await base.OnRoundEnd(winnerID);
+            await base.OnMatchEnd(winnerID);
+        }
+
+        public override async Awaitable<MatchCompetitorInfo> GetCompetitors()
+        {
+            var competitorResponse = await NetworkController.GET("game", "get-competitors");
+            if (competitorResponse.Error != null)
+            {
+                Debug.LogError($"GETTING COMPETITORS FAILED");
+                Debug.LogError(competitorResponse.Error);
+                return await base.GetCompetitors();
+            }
+            return JsonConvert.DeserializeObject<MatchCompetitorInfo>(competitorResponse.Text);
+        }
+
+        private async void OnDestroy()
+        {
+            // Formally end the current session
+            await NetworkController.GET("game", "reset-state");
         }
     }
 }
