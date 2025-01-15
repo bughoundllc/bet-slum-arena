@@ -1,6 +1,4 @@
 using System.Collections.Generic;
-using Unity.VisualScripting.Antlr3.Runtime;
-using UnityEditor.PackageManager;
 using UnityEngine;
 using UnityEngine.Networking;
 
@@ -11,7 +9,9 @@ namespace bet_slum
         private const string AuthorizationHeaderKey = "Cookie";
         private static string _sessionToken = "";
 
-        private const string _baseURL = "http://34.174.66.135:5000";
+        private const string _productionRelayURL = "http://34.174.66.135:5000";
+        private const string _developmentRelayURL = "http://localhost:5001";
+        private const string _baseURL = _developmentRelayURL;
         private static string _apiURL = $"{_baseURL}/api";
 
         public struct ResponseData

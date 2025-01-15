@@ -1,4 +1,5 @@
 using bet_slum.CombatArena.Agents;
+using bet_slum.Data;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
@@ -10,8 +11,11 @@ namespace bet_slum
     public class MatchRunner: MonoBehaviour
     {
         protected ShowRunner _runner;
-        protected MatchCompetitorInfo _competitorData;
-        protected virtual int GetWinnerID => -1;
+
+        public GameCompetitionInfo CompetitorData { get { return _competitorData; } }
+        protected GameCompetitionInfo _competitorData;
+        protected virtual int WinnerID => -1;
+        public virtual int MaxCompetitorCount => 2;
 
         public virtual async Awaitable InitializeGameEnvironment(ShowRunner runner)
         {
@@ -20,16 +24,17 @@ namespace bet_slum
 
         public virtual async Awaitable InitializeMatchEnvironment()
         {
-            _competitorData = await _runner.GetCompetitors();
         }
 
-        public async virtual Awaitable InitializeMatchCompetitors() { }
+        public async virtual Awaitable InitializeMatchCompetitors() {
+            _competitorData = await _runner.GetCompetitors();
+        }
 
         public virtual void StartMatch() { }
 
         public virtual async Awaitable EndMatch() 
         {
-            await _runner.OnMatchEnd(GetWinnerID);
+            await _runner.OnMatchEnd(WinnerID);
         }
     }
 }

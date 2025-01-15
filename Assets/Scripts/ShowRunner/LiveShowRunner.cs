@@ -1,3 +1,4 @@
+using bet_slum.Data;
 using Google.Cloud.SecretManager.V1;
 using Newtonsoft.Json;
 using System;
@@ -23,8 +24,7 @@ namespace bet_slum.showRunner
         {
             await LoginToAPI();
 
-            // make sure game state is in sync from last run
-            await NetworkController.GET("game", "reset-state");
+            await NetworkController.GET("game", "start-game");
             await base.Initialize();
         }
 
@@ -76,22 +76,23 @@ namespace bet_slum.showRunner
             await base.OnMatchEnd(winnerID);
         }
 
-        public override async Awaitable<MatchCompetitorInfo> GetCompetitors()
+        public override async Awaitable<GameCompetitionInfo> GetCompetitors()
         {
-            var competitorResponse = await NetworkController.GET("game", "get-competitors");
+            var bodyForm = new WWWForm();
+            bodyForm.AddField("Count", _matchRunner.MaxCompetitorCount.ToString());
+            var competitorResponse = await NetworkController.POST("game", "get-competitors", bodyForm);
             if (competitorResponse.Error != null)
             {
                 Debug.LogError($"GETTING COMPETITORS FAILED");
                 Debug.LogError(competitorResponse.Error);
                 return await base.GetCompetitors();
             }
-            return JsonConvert.DeserializeObject<MatchCompetitorInfo>(competitorResponse.Text);
+            return JsonConvert.DeserializeObject<GameCompetitionInfo>(competitorResponse.Text);
         }
 
         private async void OnDestroy()
         {
-            // Formally end the current session
-            await NetworkController.GET("game", "reset-state");
+            await NetworkController.GET("game", "stop-game");
         }
     }
 }

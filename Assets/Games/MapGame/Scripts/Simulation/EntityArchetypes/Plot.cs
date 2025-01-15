@@ -8,9 +8,11 @@ namespace bet_slum.Games.MapGame.Simulation.EntityArchetypes
         public Vector3 PlotWorldCenter;
 
         public Commander Controller;
+        public bool Navigable = true;
+
         public int Population;
         public int BasePopulationCap;
         public float GrowthRate;
-        public bool Navigable = true;
+        public float CurrentGrowthProgress;
     }
 }

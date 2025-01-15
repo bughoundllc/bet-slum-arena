@@ -1,4 +1,5 @@
 using TMPro;
+using Unity.Mathematics;
 using UnityEngine;
 
 namespace bet_slum.UI
@@ -17,7 +18,13 @@ namespace bet_slum.UI
 
         private void Update()
         {
-            _text.SetText($"{_runner.RemainingBetDuration:F2}");
+            if(!_runner.BettingIsEnabled)
+            {
+                _text.SetText("");
+                return;
+            }
+
+            _text.SetText($"{math.max(0f,  _runner.RemainingBetDuration):F2}");
         }
     }
 

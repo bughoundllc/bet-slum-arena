@@ -1,17 +1,18 @@
+using bet_slum.Data;
 using UnityEngine;
 
 namespace bet_slum.showRunner
 {
     public class MockShowRunner: ShowRunner
     {
-        public override async Awaitable<MatchCompetitorInfo> GetCompetitors()
+        public override async Awaitable<GameCompetitionInfo> GetCompetitors()
         {
             return new()
             {
-                CompetitionTeams = new() 
+                competitionTeams = new()
                 {
-                    new() { new() { id = "Competitor A", name = "Competitor A" } },
-                    new() { new() { id = "Competitor B", name = "Competitor B" } }
+                    new GameCompetitionTeamData{ competitors = new(){ new Competitor {  id = "CompetitorA", name = "Competitor A"} }, competitorStats = new()},
+                    new GameCompetitionTeamData{ competitors = new(){ new Competitor {  id = "CompetitorB", name = "Competitor B"} }, competitorStats = new()}
                 }
             };
         }

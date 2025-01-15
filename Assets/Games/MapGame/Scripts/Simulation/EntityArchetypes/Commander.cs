@@ -12,10 +12,10 @@ namespace bet_slum.Games.MapGame.Simulation.EntityArchetypes
 
         // State
         public Color32 CapitalPlotID;
+        public float LastDecisionTime;
 
         // Person
-        public float AttackSkill;
-        public float DefenseSkill;
         public float StewardshipSkill;
+        public float AttentionSkill;
     }
 }

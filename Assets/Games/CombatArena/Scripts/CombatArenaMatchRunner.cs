@@ -22,7 +22,7 @@ namespace bet_slum.CombatArena
         [SerializeField] private HealthBar _healthBarA;
         [SerializeField] private HealthBar _healthBarB;
 
-        protected override int GetWinnerID =>
+        protected override int WinnerID =>
             _matchVictor == _agentA ? 0 : _matchVictor == _agentB ? 1 : -1;
         private ArenaAgent _matchVictor;
 
@@ -45,8 +45,9 @@ namespace bet_slum.CombatArena
 
         public override async Awaitable InitializeMatchCompetitors()
         {
-            _agentA.Initialize(_competitorData.CompetitionTeams[0].First(), _agent1SpawnPosition.position, _agent1SpawnPosition.rotation);
-            _agentB.Initialize(_competitorData.CompetitionTeams[1].First(), _agent2SpawnPosition.position, _agent2SpawnPosition.rotation);
+            await base.InitializeMatchCompetitors();
+            _agentA.Initialize(_competitorData.competitionTeams[0].competitors[0/*assumes 1 competitor per team*/], _agent1SpawnPosition.position, _agent1SpawnPosition.rotation);
+            _agentB.Initialize(_competitorData.competitionTeams[1].competitors[0/*assumes 1 competitor per team*/], _agent2SpawnPosition.position, _agent2SpawnPosition.rotation);
         }
 
 
@@ -74,8 +75,14 @@ namespace bet_slum.CombatArena
             // TODO - trash or abstract this
             if (_endRoundFired) return;
 
+            if (_agentA == null || _agentB == null) 
+            {
+                Debug.LogWarning($"Agents are not initialized.");
+                return; 
+            }
+
             // Check for victory conditions
-            if (_agentA.CurrentHP <= 0f || _agentB.CurrentHP <= 0f)
+            if (_agentA?.CurrentHP <= 0f || _agentB?.CurrentHP <= 0f)
             {
                 _endRoundFired = true;
                 _matchVictor = _agentA.CurrentHP <= 0f

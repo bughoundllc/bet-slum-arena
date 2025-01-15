@@ -1,7 +1,12 @@
+using bet_slum.Data;
 using bet_slum.Games.MapGame.Simulation;
+using bet_slum.Games.MapGame.Simulation.EntityArchetypes;
 using bet_slum.Games.MapGame.View;
 using System.Collections.Generic;
+using System.Linq;
+using System.Text;
 using System.Threading.Tasks;
+using TMPro;
 using UnityEngine;
 
 namespace bet_slum.Games.MapGame
@@ -14,8 +19,7 @@ namespace bet_slum.Games.MapGame
         public ViewSystem ViewSystem;
         public SimulationSystem SimulationSystem;
         private bool _running = false;
-        private float _lastTickTime = 0f;
-        private float tickInterval = .5f;
+        private bool _isInitialized = false;
 
         private Dictionary<string, int> _competitorToTeamIDLookup = new Dictionary<string, int>();
 
@@ -24,6 +28,14 @@ namespace bet_slum.Games.MapGame
 
         // TODO - some other config method
         [HideInInspector] public Texture2D Map;
+        [SerializeField] private TMP_Text _auxText;
+
+        public PlotInfoUI PlotInfoUIPrototype;
+        public CompetitorInfoUI CompetitorLabelPrototype;
+        public ArmyView ArmyViewPrototype;
+        public LineRenderer RoadPrototype;
+
+        public override int MaxCompetitorCount => SimulationSystem.Commanders.Count;
 
         public override Awaitable InitializeGameEnvironment(ShowRunner runner)
         {
@@ -45,23 +57,34 @@ namespace bet_slum.Games.MapGame
         public async override Awaitable InitializeMatchCompetitors()
         {
             SimulationSystem.Initialize(this);
-            ViewSystem.Initialize(this);
+
+            await base.InitializeMatchCompetitors();
+
             _competitorToTeamIDLookup.Clear();
 
             // DEBUG/WIP - undo me once we support plot count > commander count
             // DO NOT GO LIVE WITH THIS - it wont work
-            if (_competitorData.CompetitionTeams.Count < SimulationSystem.Commanders.Count)
-            {
-                while (_competitorData.CompetitionTeams.Count < SimulationSystem.Commanders.Count)
-                    _competitorData.CompetitionTeams.Add(new() { new() { id = $"DUMMY{_competitorData.CompetitionTeams.Count}", name = $"DUMMY{_competitorData.CompetitionTeams.Count}" } });
-            }
+            //if (_competitorData.competitionTeams.Count < SimulationSystem.Commanders.Count)
+            //{
+            //    while (_competitorData.competitionTeams.Count < SimulationSystem.Commanders.Count)
+            //        _competitorData.competitionTeams.Add(new() { new() { id = $"DUMMY{_competitorData.CompetitorData.Count}", name = $"DUMMY{_competitorData.CompetitorData.Count}" } });
+            //}
 
-            for(int i = 0; i < _competitorData.CompetitionTeams.Count; i++)
+            for (int i = 0; i < _competitorData.competitionTeams.Count; i++)
             {
                 var commander = SimulationSystem.Commanders[i];
-                commander.CompetitorID = _competitorData.CompetitionTeams[i][0].id;
+                var competitor = _competitorData.competitionTeams[i].competitors[0/*assumes 1 competitor per team*/];
+
+                commander.CompetitorID = competitor.id;
+                commander.StewardshipSkill = _competitorData.GetCompetitorStatValue(competitor.id, "STAT_Stewardship");
+                commander.AttentionSkill = _competitorData.GetCompetitorStatValue(competitor.id, "STAT_Attention", defaultValue: Random.Range(0f, Competitor.MAX_LEVEL));
+
                 _competitorToTeamIDLookup.Add(commander.CompetitorID, i);
             }
+
+            ViewSystem.Initialize(this);
+
+            _isInitialized = true;
         }
 
         public override void StartMatch()
@@ -72,37 +95,54 @@ namespace bet_slum.Games.MapGame
         public async override Awaitable EndMatch()
         {
             _running = false;
-            await Task.Delay(5000); // to see the end map
+            _isInitialized = false;
+            ViewSystem.OnUpdate(this);
+
+            await Task.Delay(3000); // to see the end map
             await base.EndMatch();
         }
 
         private async void Update()
         {
+            if (!_isInitialized) return; // this is sloppy
+
             ViewSystem.OnUpdate(this);
 
             if (_endRoundFired) return;
             if (!_running) return;
 
-            if(Time.time - _lastTickTime >= tickInterval)
+            SimulationSystem.OnUpdate(this);
+            MapMesh.UpdateControlledMapView(this); // this sucks
+
+            var survivingCommanders = 0;
+            foreach (var commander in SimulationSystem.Commanders)
             {
-                SimulationSystem.OnUpdate(this);
-                MapMesh.UpdateControlledMapView(this); // this sucks
+                if (SimulationSystem.GetTotalPopulation(commander) > 0) survivingCommanders++;
+            }
 
-                _lastTickTime = Time.time;
-
-                if(SimulationSystem.Commanders.Count == 1) // endgame conditions
-                {
-                    Debug.Log($"Winner! {SimulationSystem.Commanders[0].TestData.name}");
-                    // this is bad
-                    _endRoundFired = true;
-                    await EndMatch();
-                    _endRoundFired = false;
-                }
+            if (survivingCommanders <= 1) // endgame conditions
+            {
+                Debug.Log($"Winner! {SimulationSystem.Commanders[0].TestData.name}");
+                // this is bad
+                _endRoundFired = true;
+                await EndMatch();
+                _endRoundFired = false;
             }
         }
 
         // TODO - map competitors to team IDs
-        protected override int GetWinnerID => _competitorToTeamIDLookup[SimulationSystem.Commanders[0].CompetitorID];
+        protected override int WinnerID
+        {
+            get
+            {
+                for (int i = 0; i < SimulationSystem.Commanders.Count; i++)
+                {
+                    if (SimulationSystem.GetTotalPopulation(SimulationSystem.Commanders[i]) > 0)
+                        return i;
+                }
+                return -1;
+            }
+        }
     }
 }
 

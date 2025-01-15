@@ -1,137 +1,150 @@
+using bet_slum.Games.MapGame.Simulation;
 using bet_slum.Games.MapGame.Simulation.EntityArchetypes;
 using System.Collections.Generic;
+using System.Linq;
+using TMPro;
+using Unity.Burst.Intrinsics;
 using Unity.Mathematics;
 using UnityEngine;
 using UnityEngine.Pool;
+using UnityEngine.UI;
 
 namespace bet_slum.Games.MapGame.View
 {
     public class ViewSystem
     {
-        private float _maxIndicatorHeight = 10f;
+        private ObjectPool<PlotInfoUI> _plotInfoWidgetPool;
+        private Dictionary<Color32, PlotInfoUI> _plotInfoUIWidgets = new();
 
-        private ObjectPool<GameObject> _popIndicatorPool;
-        private Dictionary<Color32, GameObject> _plotPopIndicators = new();
+        private ObjectPool<CompetitorInfoUI> _competitorWidgetPool;
+        private Dictionary<string, CompetitorInfoUI> _competitorLabels = new();
 
-        private enum BorderMode
-        {
-            None,
-            Plot,
-            Commander
-        }
-        private BorderMode _currentBorderMode = BorderMode.None;
+        private ObjectPool<ArmyView> _armyViewPool;
+        private Dictionary<Army, ArmyView> _armyViews = new();
+
+        private List<LineRenderer> _roadViews = new();
 
         public void Initialize(MapGameMatchRunner mainSystem)
         {
-            if(_popIndicatorPool == null)
-                _popIndicatorPool = new(() => GameObject.CreatePrimitive(PrimitiveType.Cube), indicator => indicator.SetActive(true), indicator => indicator.SetActive(false), indicator => GameObject.Destroy(indicator));
+            if (_plotInfoWidgetPool == null)
+                _plotInfoWidgetPool = new(() => GameObject.Instantiate(mainSystem.PlotInfoUIPrototype, mainSystem.PlotInfoUIPrototype.transform.parent), widget => widget.gameObject.SetActive(true), widget => widget.gameObject.SetActive(false), widget => GameObject.Destroy(widget.gameObject));
 
-            var pixels32 = mainSystem.Map.GetPixels32();
-            for (int i = 0; i < pixels32.Length; i++)
+            if (_competitorWidgetPool == null)
+                _competitorWidgetPool = new(() => GameObject.Instantiate(mainSystem.CompetitorLabelPrototype, mainSystem.CompetitorLabelPrototype.transform.parent), label => label.gameObject.SetActive(true), label => label.gameObject.SetActive(false), label => GameObject.Destroy(label.gameObject));
+
+            if (_armyViewPool == null)
+                _armyViewPool = new(() =>
+                {
+                    var view = GameObject.Instantiate(mainSystem.ArmyViewPrototype);
+                    view.ArmyModelRenderer.material = new Material(view.ArmyModelRenderer.material);
+                    return view;
+                }, view => view.gameObject.SetActive(true), view => view.gameObject.SetActive(false), view => GameObject.Destroy(view.gameObject));
+
+            // TODO - do this for those cylinders wherever they are
+            foreach (var view in _roadViews)
+                GameObject.Destroy(view.gameObject);
+            _roadViews.Clear();
+            var shownPairs = new List<(Color32 a, Color32 b)>();
+            foreach (var plotNeighbors in mainSystem.SimulationSystem.PlotNeighborLookup)
             {
-                var color = pixels32[i];
+                var sourcePlot = mainSystem.SimulationSystem.Plots[plotNeighbors.Key];
+                foreach (var target in plotNeighbors.Value)
+                {
+                    // todo - some kinda comparer here - this whole imp is trash cba
+                    if (shownPairs.Count(p => (p.a.Equals(plotNeighbors.Key) && p.b.Equals(target))
+                        || (p.b.Equals(plotNeighbors.Key) && p.a.Equals(target))) > 0)
+                        continue;
 
-                if (!_plotPopIndicators.ContainsKey(color))
-                    _plotPopIndicators.Add(color, _popIndicatorPool.Get());
+                    // spawn pair road
+                    var road = GameObject.Instantiate(mainSystem.RoadPrototype);
+                    road.SetPosition(0, mainSystem.SimulationSystem.Plots[plotNeighbors.Key].PlotWorldCenter);
+                    road.SetPosition(1, mainSystem.SimulationSystem.Plots[target].PlotWorldCenter);
+                    _roadViews.Add(road);
+                    shownPairs.Add((plotNeighbors.Key, target));
+                }
             }
+
+
+            mainSystem.RoadPrototype.gameObject.SetActive(false);
+            mainSystem.PlotInfoUIPrototype.gameObject.SetActive(false);
+            mainSystem.CompetitorLabelPrototype.gameObject.SetActive(false);
+            mainSystem.ArmyViewPrototype.gameObject.SetActive(false);
 
             mainSystem.MapMesh.Initialize(new int2(mainSystem.Map.width, mainSystem.Map.height), mainSystem.Map);
         }
 
         public void OnUpdate(MapGameMatchRunner mainSystem)
         {
-            // Draw Plot Borders
-            var borderHeight = 0.01f;
-            // Draw Population stacks
-            switch (_currentBorderMode)
-            {
-                case BorderMode.Commander:
-                    foreach (var plotCoordinates in mainSystem.SimulationSystem.PlotPixelLookup)
-                    {
-                        var plotCommander = mainSystem.SimulationSystem.Plots[plotCoordinates.Key].Controller;
-                        foreach (var coordinate in plotCoordinates.Value)
-                        {
-                            var leftCoordinate = new int2(coordinate.x - 1, coordinate.y);
-                            if (coordinate.x > 0
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[leftCoordinate].Equals(plotCoordinates.Key)
-                                && mainSystem.SimulationSystem.Plots[mainSystem.SimulationSystem.PixelPlotLookup[leftCoordinate]].Controller != plotCommander)
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x, borderHeight, coordinate.y), new Vector3(coordinate.x, borderHeight, coordinate.y + 1f), Color.black);
-                            }
-
-                            var downCoordinate = new int2(coordinate.x, coordinate.y - 1);
-                            if (coordinate.y > 0
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[downCoordinate].Equals(plotCoordinates.Key)
-                                && mainSystem.SimulationSystem.Plots[mainSystem.SimulationSystem.PixelPlotLookup[downCoordinate]].Controller != plotCommander)
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x, borderHeight, coordinate.y), new Vector3(coordinate.x + 1f, borderHeight, coordinate.y), Color.black);
-                            }
-
-                            var upCoordinate = new int2(coordinate.x, coordinate.y + 1);
-                            if (coordinate.y < mainSystem.Map.height - 1
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[upCoordinate].Equals(plotCoordinates.Key)
-                                && mainSystem.SimulationSystem.Plots[mainSystem.SimulationSystem.PixelPlotLookup[upCoordinate]].Controller != plotCommander)
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x, borderHeight, coordinate.y + 1f), new Vector3(coordinate.x + 1f, borderHeight, coordinate.y + 1f), Color.black);
-                            }
-
-                            var rightCoordinate = new int2(coordinate.x + 1, coordinate.y);
-                            if (coordinate.x < mainSystem.Map.width - 1
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[new int2(rightCoordinate)].Equals(plotCoordinates.Key)
-                                && mainSystem.SimulationSystem.Plots[mainSystem.SimulationSystem.PixelPlotLookup[rightCoordinate]].Controller != plotCommander)
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x + 1f, borderHeight, coordinate.y), new Vector3(coordinate.x + 1f, borderHeight, coordinate.y + 1f), Color.black);
-                            }
-                        }
-                    }
-                    break;
-                case BorderMode.Plot:
-                    foreach (var plotCoordinates in mainSystem.SimulationSystem.PlotPixelLookup)
-                    {
-                        foreach (var coordinate in plotCoordinates.Value)
-                        {
-                            if (coordinate.x > 0
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[new int2(coordinate.x - 1, coordinate.y)].Equals(plotCoordinates.Key))
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x, borderHeight, coordinate.y), new Vector3(coordinate.x, borderHeight, coordinate.y + 1f), Color.black);
-                            }
-                            if (coordinate.y > 0
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[new int2(coordinate.x, coordinate.y - 1)].Equals(plotCoordinates.Key))
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x, borderHeight, coordinate.y), new Vector3(coordinate.x + 1f, borderHeight, coordinate.y), Color.black);
-                            }
-                            if (coordinate.y < mainSystem.Map.height - 1
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[new int2(coordinate.x, coordinate.y + 1)].Equals(plotCoordinates.Key))
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x, borderHeight, coordinate.y + 1f), new Vector3(coordinate.x + 1f, borderHeight, coordinate.y + 1f), Color.black);
-                            }
-                            if (coordinate.x < mainSystem.Map.width - 1
-                                && !mainSystem.SimulationSystem.PixelPlotLookup[new int2(coordinate.x + 1, coordinate.y)].Equals(plotCoordinates.Key))
-                            {
-                                Debug.DrawLine(new Vector3(coordinate.x + 1f, borderHeight, coordinate.y), new Vector3(coordinate.x + 1f, borderHeight, coordinate.y + 1f), Color.black);
-                            }
-                        }
-                    }
-                    break;
-                case BorderMode.None:
-                default:
-                    break;
-            }
-
             foreach (var plot in mainSystem.SimulationSystem.Plots)
             {
-                var indicator = _plotPopIndicators[plot.Key];
-                var height = (plot.Value.Population / (float)mainSystem.SimulationSystem.MaxPopulationCap) * _maxIndicatorHeight;
-                indicator.transform.localScale = new Vector3(height, height, height);
-                indicator.transform.position = new Vector3(plot.Value.PlotWorldCenter.x, height / 2f, plot.Value.PlotWorldCenter.z);
+                if (plot.Key.Equals(SimulationSystem.DeadPlotID)) continue;
+
+                if (!_plotInfoUIWidgets.TryGetValue(plot.Key, out var infoWidget))
+                {
+                    infoWidget = _plotInfoWidgetPool.Get();
+                    _plotInfoUIWidgets.Add(plot.Key, infoWidget);
+                }
+
+                infoWidget.transform.position = Camera.main.WorldToScreenPoint(plot.Value.PlotWorldCenter);
+                infoWidget.transform.position += Vector3.up * 50f;
+
+                infoWidget.CountLabel.SetText($"{plot.Value.Population}");
+                infoWidget.GrowthProgressMeter.value = plot.Value.CurrentGrowthProgress / 100f/*TODO extract*/;
             }
 
-            foreach (var war in mainSystem.SimulationSystem.Wars)
+            foreach (var commander in mainSystem.SimulationSystem.Commanders)
             {
-                Debug.DrawLine(
-                        new Vector3(mainSystem.SimulationSystem.Plots[war.Attacker.CapitalPlotID].PlotWorldCenter.x, 1f, mainSystem.SimulationSystem.Plots[war.Attacker.CapitalPlotID].PlotWorldCenter.z),
-                        new Vector3(mainSystem.SimulationSystem.Plots[war.Defender.CapitalPlotID].PlotWorldCenter.x, 1f, mainSystem.SimulationSystem.Plots[war.Defender.CapitalPlotID].PlotWorldCenter.z),
-                        Color.red);
+                var competitor = mainSystem.CompetitorData.GetCompetitorData(commander.CompetitorID);
+
+                if (!_competitorLabels.TryGetValue(commander.CompetitorID, out var widget))
+                {
+                    widget = _competitorWidgetPool.Get();
+                    _competitorLabels.Add(commander.CompetitorID, widget);
+
+                    widget.Text.SetText($"<color=#{ColorUtility.ToHtmlStringRGBA(commander.TestData.DisplayColor)}>{competitor.name}</color>");
+                    widget.StatDisplay_STD.Label.SetText($"{Mathf.RoundToInt(commander.StewardshipSkill)}");
+                    widget.StatDisplay_ATT.Label.SetText($"{Mathf.RoundToInt(commander.AttentionSkill)}");
+                }
+
+                var population = mainSystem.SimulationSystem.GetTotalPopulation(commander);
+                if (population <= 0)
+                {
+                    widget.gameObject.SetActive(false);
+                    continue;
+                }
+
+                widget.gameObject.SetActive(true);
+
+                var capitalWorldPosition = mainSystem.SimulationSystem.Plots[commander.CapitalPlotID].PlotWorldCenter;
+                widget.transform.position = Camera.main.WorldToScreenPoint(capitalWorldPosition);
+                widget.transform.position -= Vector3.up * 25f;
+                widget.PopDisplay.Label.SetText($"{population}");
+            }
+
+            // need to rework this wholly to account for armies being nulled out
+            foreach (var indicator in _armyViews)
+                _armyViewPool.Release(indicator.Value);
+            _armyViews.Clear();
+            foreach (var army in mainSystem.SimulationSystem.Armies)
+            {
+                var view = _armyViewPool.Get();
+
+                // Set Position
+                var currentPlotCenter = mainSystem.SimulationSystem.Plots[army.Path[army.PathIndex]].PlotWorldCenter;
+                var targetPlotCenter = army.PathIndex == army.Path.Count - 1 ? currentPlotCenter : mainSystem.SimulationSystem.Plots[army.Path[army.PathIndex + 1]].PlotWorldCenter;
+                var progressPosition = Vector3.Lerp(currentPlotCenter, targetPlotCenter, army.PlotProgress / 1f);
+                view.transform.position = progressPosition;
+                var scale = 2f;
+                view.transform.localScale = Vector3.one * scale;
+                view.transform.position += Vector3.up * scale;
+                view.PopulationLabel.SetText($"{army.Population}");
+
+                // Set Color
+                var color = army.Commander.TestData.DisplayColor;
+                Renderer renderer = view.GetComponent<Renderer>();
+                renderer.material.color = color;
+
+                _armyViews.Add(army, view);
             }
         }
     }

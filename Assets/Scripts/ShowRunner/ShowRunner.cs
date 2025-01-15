@@ -1,4 +1,5 @@
 using bet_slum.Data;
+using System;
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
@@ -9,13 +10,14 @@ namespace bet_slum
 {
     public class ShowRunner : MonoBehaviour
     {
-        private MatchRunner _matchRunner;
+        protected MatchRunner _matchRunner;
 
         // Need a better way of handling sequencing between rounds - we'll want this to be variable eventually, driven by some sequence to allow for live, variable duration, etc
         [SerializeField] private float _bettingPeriodDuration = 15f;
         [SerializeField] private float _postBettingStartDelaySeconds = 3f;
         [SerializeField] private float _postRoundStartBettingDelay = 3f;
-        
+
+        public bool BettingIsEnabled => _bettingEnabled;
         private bool _bettingEnabled = false;
         private float _lastBetPeriodStart;
 
@@ -100,19 +102,13 @@ namespace bet_slum
             _matchRunner.StartMatch();
         }
 
-        // TODO - abtract to shared class lib
-        public class MatchCompetitorInfo
-        {
-            public List<List<Competitor>> CompetitionTeams;
-        }
-
-        public virtual async Awaitable<MatchCompetitorInfo> GetCompetitors()
+        public virtual async Awaitable<GameCompetitionInfo> GetCompetitors()
         {
             return new() {
-                CompetitionTeams = new()
+                competitionTeams = new()
                 {
-                    new List<Competitor>() {},
-                    new List<Competitor>() {}
+                    new GameCompetitionTeamData{ competitors = new(){ new Competitor { id = Guid.NewGuid().ToString(), name = "Mock Competitor A"} }, competitorStats = new() },
+                    new GameCompetitionTeamData{ competitors = new(){ new Competitor { id = Guid.NewGuid().ToString(), name = "Mock Competitor B"} }, competitorStats = new() }
                 }
             };
         }
