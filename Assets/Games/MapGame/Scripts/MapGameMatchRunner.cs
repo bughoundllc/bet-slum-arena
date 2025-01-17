@@ -8,6 +8,7 @@ using System.Text;
 using System.Threading.Tasks;
 using TMPro;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace bet_slum.Games.MapGame
 {
@@ -32,10 +33,11 @@ namespace bet_slum.Games.MapGame
 
         public PlotInfoUI PlotInfoUIPrototype;
         public CompetitorInfoUI CompetitorLabelPrototype;
-        public ArmyView ArmyViewPrototype;
+        public GameObject PacketViewPrototype;
+        public GameObject BuildingViewPrototype;
         public LineRenderer RoadPrototype;
 
-        public override int MaxCompetitorCount => SimulationSystem.Commanders.Count;
+        public override int MaxCompetitorCount => 32;
 
         public override Awaitable InitializeGameEnvironment(ShowRunner runner)
         {
@@ -56,31 +58,18 @@ namespace bet_slum.Games.MapGame
 
         public async override Awaitable InitializeMatchCompetitors()
         {
-            SimulationSystem.Initialize(this);
+            SimulationSystem.InitializeMap(this);
 
             await base.InitializeMatchCompetitors();
 
             _competitorToTeamIDLookup.Clear();
-
-            // DEBUG/WIP - undo me once we support plot count > commander count
-            // DO NOT GO LIVE WITH THIS - it wont work
-            //if (_competitorData.competitionTeams.Count < SimulationSystem.Commanders.Count)
-            //{
-            //    while (_competitorData.competitionTeams.Count < SimulationSystem.Commanders.Count)
-            //        _competitorData.competitionTeams.Add(new() { new() { id = $"DUMMY{_competitorData.CompetitorData.Count}", name = $"DUMMY{_competitorData.CompetitorData.Count}" } });
-            //}
-
             for (int i = 0; i < _competitorData.competitionTeams.Count; i++)
             {
-                var commander = SimulationSystem.Commanders[i];
                 var competitor = _competitorData.competitionTeams[i].competitors[0/*assumes 1 competitor per team*/];
-
-                commander.CompetitorID = competitor.id;
-                commander.StewardshipSkill = _competitorData.GetCompetitorStatValue(competitor.id, "STAT_Stewardship");
-                commander.AttentionSkill = _competitorData.GetCompetitorStatValue(competitor.id, "STAT_Attention", defaultValue: Random.Range(0f, Competitor.MAX_LEVEL));
-
-                _competitorToTeamIDLookup.Add(commander.CompetitorID, i);
+                _competitorToTeamIDLookup.Add(competitor.id, i);
             }
+
+            SimulationSystem.InitializeCompetitors(this);
 
             ViewSystem.Initialize(this);
 
@@ -106,23 +95,27 @@ namespace bet_slum.Games.MapGame
         {
             if (!_isInitialized) return; // this is sloppy
 
+            Profiler.BeginSample("View System Update");
             ViewSystem.OnUpdate(this);
+            Profiler.EndSample();
 
             if (_endRoundFired) return;
             if (!_running) return;
 
+            Profiler.BeginSample("Simulation System Update");
             SimulationSystem.OnUpdate(this);
+            Profiler.EndSample();
+
+            Profiler.BeginSample("Map View Update");
             MapMesh.UpdateControlledMapView(this); // this sucks
+            Profiler.EndSample();
 
-            var survivingCommanders = 0;
-            foreach (var commander in SimulationSystem.Commanders)
-            {
-                if (SimulationSystem.GetTotalPopulation(commander) > 0) survivingCommanders++;
-            }
-
+            var survivingCommanders = SimulationSystem.Commanders
+                .Count(commander => SimulationSystem.Plots.Count(plot => plot.Value.Building != null && plot.Value.Building.CommanderID == commander.Key) > 0);
+            
             if (survivingCommanders <= 1) // endgame conditions
             {
-                Debug.Log($"Winner! {SimulationSystem.Commanders[0].TestData.name}");
+                Debug.Log($"Winner! {SimulationSystem.Commanders.First(commander => SimulationSystem.Plots.Count(plot => plot.Value.Building != null && plot.Value.Building.CommanderID == commander.Key) > 0)}");
                 // this is bad
                 _endRoundFired = true;
                 await EndMatch();
@@ -135,12 +128,18 @@ namespace bet_slum.Games.MapGame
         {
             get
             {
-                for (int i = 0; i < SimulationSystem.Commanders.Count; i++)
+                try
                 {
-                    if (SimulationSystem.GetTotalPopulation(SimulationSystem.Commanders[i]) > 0)
-                        return i;
+                    // .First() will throw err if none exists
+                    return _competitorToTeamIDLookup[
+                        SimulationSystem.Commanders.First(
+                            commander => SimulationSystem.Plots.Count(
+                                plot => plot.Value.Building != null && plot.Value.Building.CommanderID == commander.Key) > 0).Key];
                 }
-                return -1;
+                catch
+                {
+                    return -1;
+                }
             }
         }
     }

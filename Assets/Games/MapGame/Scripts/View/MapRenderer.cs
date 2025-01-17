@@ -1,7 +1,11 @@
+using bet_slum.Games.MapGame.Simulation;
+using bet_slum.Games.MapGame.Simulation.EntityArchetypes;
 using bet_slum.Utility.Rendering;
+using System.Collections.Generic;
 using Unity.Collections;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.Profiling;
 
 namespace bet_slum.Games.MapGame.View
 {
@@ -15,28 +19,56 @@ namespace bet_slum.Games.MapGame.View
         private MeshFilter _filter;
         private MeshRenderer _renderer;
 
+        private Dictionary<Color32, Color32> _lastPlotColor = new();
         // TODO - split this logic up
         public void UpdateControlledMapView(MapGameMatchRunner mainSystem)
         {
-            var pixels = new Color32[mainSystem.Map.width * mainSystem.Map.height];
+            Profiler.BeginSample("Get pixels");
+            var pixels = mainSystem.Map.GetPixels32();
+            Profiler.EndSample();
+
             //var mapPixels = GameRunner.Instance.
             //(_renderer.material.mainTexture as Texture2D).SetPixels();
-            for (int i = 0; i < pixels.Length; i++)
+            Profiler.BeginSample("Pixel Update");
+            foreach(var plot in mainSystem.SimulationSystem.Plots)
             {
-                var coordinate = new int2(i % mainSystem.Map.width, i / mainSystem.Map.width);
-                var plotID = mainSystem.SimulationSystem.PixelPlotLookup[coordinate];
-                if (plotID.Equals(new Color32(0, 0, 0, 255)))
+                if (plot.Key.Equals(SimulationSystem.DeadPlotID)) continue;
+                // if owner/color has changed, we update those pixels only
+                var plotColor = (Color32)Color.white;
+                if (plot.Value.Building != null) 
                 {
-                    continue;
+                    var hpPct = plot.Value.Building.HP / plot.Value.Building.MaxHP;
+                    var commanderColor = mainSystem.SimulationSystem.Commanders[plot.Value.Building.CommanderID].TestData.DisplayColor;
+
+                    var minColor = Color.Lerp(Color.white, commanderColor, 0.35f);
+                    plotColor = Color.Lerp(minColor, commanderColor, math.clamp(hpPct, 0f, 1f));
                 }
-                var commander = mainSystem.SimulationSystem.Plots[plotID].Controller;
 
-                pixels[i] = commander.TestData.DisplayColor;
+                var shouldUpdate = false;
+                if(!_lastPlotColor.TryGetValue(plot.Key, out var lastColor))
+                {
+                    _lastPlotColor[plot.Key] = lastColor;
+                    // TODO - UPDATE
+                    shouldUpdate = true;
+                }
+
+                shouldUpdate |= !_lastPlotColor[plot.Key].Equals(plotColor);
+                if (shouldUpdate)
+                {
+                    foreach(var pixelCoordinate in mainSystem.SimulationSystem.PlotPixelLookup[plot.Key])
+                    {
+                        var pixelIdx = pixelCoordinate.y * mainSystem.Map.width + pixelCoordinate.x;
+                        pixels[pixelIdx] = plotColor;
+                    }
+                }
             }
+            Profiler.EndSample();
 
+            Profiler.BeginSample("Apply Pixel Update");
             var tex = _renderer.material.mainTexture as Texture2D;
             tex.SetPixels32(pixels);
             tex.Apply();
+            Profiler.EndSample();
         }
 
         public void Initialize(int2 dimensions, Texture2D texture)
