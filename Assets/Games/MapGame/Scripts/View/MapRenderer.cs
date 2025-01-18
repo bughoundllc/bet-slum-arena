@@ -35,10 +35,10 @@ namespace bet_slum.Games.MapGame.View
                 if (plot.Key.Equals(SimulationSystem.DeadPlotID)) continue;
                 // if owner/color has changed, we update those pixels only
                 var plotColor = (Color32)Color.white;
-                if (plot.Value.Building != null) 
+                if (plot.Value.CreepControllerID != null) 
                 {
-                    var hpPct = plot.Value.Building.HP / plot.Value.Building.MaxHP;
-                    var commanderColor = mainSystem.SimulationSystem.Commanders[plot.Value.Building.CommanderID].TestData.DisplayColor;
+                    var hpPct = plot.Value.CreepAmount / plot.Value.MaxCreepAmount;
+                    var commanderColor = mainSystem.SimulationSystem.Commanders[plot.Value.CreepControllerID].TestData.DisplayColor;
 
                     var minColor = Color.Lerp(Color.white, commanderColor, 0.35f);
                     plotColor = Color.Lerp(minColor, commanderColor, math.clamp(hpPct, 0f, 1f));

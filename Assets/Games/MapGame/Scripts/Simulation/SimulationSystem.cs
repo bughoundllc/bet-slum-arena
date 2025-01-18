@@ -5,6 +5,9 @@ using Unity.Mathematics;
 using UnityEngine;
 using bet_slum.Utility;
 using bet_slum.Data;
+using static UnityEngine.GraphicsBuffer;
+using Unity.VisualScripting;
+using UnityEngine.Rendering;
 
 namespace bet_slum.Games.MapGame.Simulation
 {
@@ -26,14 +29,29 @@ namespace bet_slum.Games.MapGame.Simulation
         private float _buildingLevel2SupplyCap = 12;
         private float _buildingLevel2FireRate = 1f;
         private float _productionGenerationPerControlledPlot = 0.4f;
+        private float _creepSentPerPacket = 10f;
 
         // Entities
         public Dictionary<Color32, Plot> Plots => _plots;
         private Dictionary<Color32, Plot> _plots = new();
         public Dictionary<string, Commander> Commanders => _commanders;
         private Dictionary<string, Commander> _commanders = new();
+        public Dictionary<string, Hero> Heroes => _heroes;
+        private Dictionary<string, Hero> _heroes = new();
         public List<Packet> Packets => _packets;
         private List<Packet> _packets = new();
+        //public List<War> Wars => _wars;
+        //private List<War> _wars = new();
+
+        private bool IsAtWar(string partyA, string partyB)
+        {
+            foreach(var war in _wars)
+            {
+                if (partyA == war.AggressorID && partyB == war.DefenderID) return true;
+                if (partyB == war.AggressorID && partyA == war.DefenderID) return true;
+            }
+            return false;
+        }
 
         // Lookups
         private Dictionary<Plot, Color32> _plotKeyLookup = new();
@@ -53,6 +71,7 @@ namespace bet_slum.Games.MapGame.Simulation
             _plots.Clear();
             _commanders.Clear();
             _packets.Clear();
+            _heroes.Clear();
 
             _plotKeyLookup.Clear();
             _plotPixelLookup.Clear();
@@ -71,31 +90,29 @@ namespace bet_slum.Games.MapGame.Simulation
         {
             var spawnPlotIndices = new List<Color32>();
             foreach (var plot in _plots)
+            {
                 spawnPlotIndices.Add(plot.Key);
-            var shuffledIndicesQueue = new Queue<Color32>(spawnPlotIndices.Shuffle());
+            };
+            var shuffledIndicesQueue = spawnPlotIndices.Shuffle();
 
             var competitionInfo = mainSystem.CompetitorData;
             for (int i = 0; i < competitionInfo.competitionTeams.Count; i++)
             {
-                if(!shuffledIndicesQueue.TryDequeue(out var nextPlotIdx))
-                {
-                    throw new System.Exception($"Not enough plots ({_plots.Count}) for allotted competition teams ({competitionInfo.competitionTeams.Count})");
-                }
-                if (nextPlotIdx.Equals(DeadPlotID)) continue;
+                var plotIdex = shuffledIndicesQueue.FirstOrDefault(pIdx => _plotNeighborLookup[pIdx].Count(nIdx => _plots[nIdx].CreepControllerID != null) == 0);
 
                 var competitor = competitionInfo.competitionTeams[i].competitors[0];
                 var commanderKey = competitor.id;
                 
                 var maxStatScalar = 3f;
-                var atkStat = competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Attack", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
-                var defStat = competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Defense", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
-                var stdStat = competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Stewardship", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
+                var atkStat = 1f;// competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Attack", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
+                var defStat = 1f; competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Defense", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
+                var stdStat = 1f; competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Stewardship", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
                 
                 var commander = new Commander
                 {
-                    TestData = new(nextPlotIdx, competitor.name),
+                    TestData = new(plotIdex, competitor.name),
                     CompetitorID = commanderKey,
-                    CapitalID = nextPlotIdx,
+                    CapitalID = plotIdex,
                     ProductionStat = 1f,
                     AttackDamageMultiplierStat = (atkStat / WorldConsts.MaxStat) * maxStatScalar,
                     PacketSpeedStat = (defStat / WorldConsts.MaxStat) * maxStatScalar,
@@ -104,10 +121,19 @@ namespace bet_slum.Games.MapGame.Simulation
                 _commanders.Add(commanderKey, commander);
                 
                 _commanderPlotLookup.Add(commanderKey, new());
-                _commanderPlotLookup[commanderKey].Add(nextPlotIdx);
+                _commanderPlotLookup[commanderKey].Add(plotIdex);
 
-                _plots[nextPlotIdx].Building = new Building { CommanderID = commanderKey, HP = _buildingLevel1HP, MaxHP = _buildingLevel1HP };
+                _plots[plotIdex].Building = new Building { CommanderID = commanderKey, HP = _buildingLevel1HP, MaxHP = _buildingLevel1HP };
+                _plots[plotIdex].CreepAmount = _plots[plotIdex].MaxCreepAmount;
+                _plots[plotIdex].CreepControllerID = commanderKey;
+
+                var hero = new Hero { };
+                hero.HP = hero.HPMax;
+                hero.CurrentPlotIdx = plotIdex;
+                _heroes.Add(commanderKey, hero);
             }
+
+            // reset for competitors with neighbors - todo work this into original loop
         }
 
         private void CalculateMapPlotData()
@@ -117,6 +143,7 @@ namespace bet_slum.Games.MapGame.Simulation
             for (int i = 0; i < pixels32.Length; i++)
             {
                 var color = pixels32[i];
+                if (color.Equals(DeadPlotID)) continue;
 
                 if (!_plotPixelLookup.ContainsKey(color))
                 {
@@ -134,8 +161,6 @@ namespace bet_slum.Games.MapGame.Simulation
             var ix = 0;
             foreach (var color in _plots.Keys)
             {
-                if (color.Equals(DeadPlotID)) continue;
-
                 var maxExtents = int2.zero;
                 var minExtents = new int2(int.MaxValue, int.MaxValue);
                 foreach (var coordinate in _plotPixelLookup[color])
@@ -159,8 +184,6 @@ namespace bet_slum.Games.MapGame.Simulation
         {
             foreach (var plotPixelGroup in _plotPixelLookup)
             {
-                if (plotPixelGroup.Key.Equals(DeadPlotID)) continue;
-
                 var plotID = plotPixelGroup.Key;
                 _plotNeighborLookup.Add(plotID, new());
 
@@ -169,378 +192,405 @@ namespace bet_slum.Games.MapGame.Simulation
                     // check 4-dir neighbors with bounds clamping for potential neighbors
 
                     // left
-                    if (plotPixel.x > 0)
+                    if (plotPixel.x > 0
+                        && PixelPlotLookup.ContainsKey(new int2(plotPixel.x - 1, plotPixel.y)))
                     {
                         var neighborPixelPlotID = _pixelPlotLookup[new int2(plotPixel.x - 1, plotPixel.y)];
-                        if (
-                            !_plotNeighborLookup[plotID].Contains(neighborPixelPlotID)
-                            && !neighborPixelPlotID.Equals(DeadPlotID))
-                        {
+                        if (!_plotNeighborLookup[plotID].Contains(neighborPixelPlotID))
                             _plotNeighborLookup[plotID].Add(neighborPixelPlotID);
-                        }
                     }
                     // right
-                    if (plotPixel.x < _plotMap.width - 1)
+                    if (plotPixel.x < _plotMap.width - 1
+                        && PixelPlotLookup.ContainsKey(new int2(plotPixel.x + 1, plotPixel.y)))
                     {
                         var neighborPixelPlotID = _pixelPlotLookup[new int2(plotPixel.x + 1, plotPixel.y)];
-                        if (
-                            !_plotNeighborLookup[plotID].Contains(neighborPixelPlotID)
-                            && !neighborPixelPlotID.Equals(DeadPlotID))
-                        {
+                        if (!_plotNeighborLookup[plotID].Contains(neighborPixelPlotID))
                             _plotNeighborLookup[plotID].Add(neighborPixelPlotID);
-                        }
                     }
                     // up
-                    if (plotPixel.y < _plotMap.height - 1)
+                    if (plotPixel.y < _plotMap.height - 1
+                        && PixelPlotLookup.ContainsKey(new int2(plotPixel.x, plotPixel.y + 1)))
                     {
                         var neighborPixelPlotID = _pixelPlotLookup[new int2(plotPixel.x, plotPixel.y + 1)];
-                        if (
-                            !_plotNeighborLookup[plotID].Contains(neighborPixelPlotID)
-                            && !neighborPixelPlotID.Equals(DeadPlotID))
-                        {
+                        if (!_plotNeighborLookup[plotID].Contains(neighborPixelPlotID))
                             _plotNeighborLookup[plotID].Add(neighborPixelPlotID);
-                        }
                     }
                     // down
-                    if (plotPixel.y > 0)
+                    if (plotPixel.y > 0
+                        && PixelPlotLookup.ContainsKey(new int2(plotPixel.x, plotPixel.y - 1)))
                     {
                         var neighborPixelPlotID = _pixelPlotLookup[new int2(plotPixel.x, plotPixel.y - 1)];
-                        if (
-                            !_plotNeighborLookup[plotID].Contains(neighborPixelPlotID)
-                            && !neighborPixelPlotID.Equals(DeadPlotID))
-                        {
+                        if (!_plotNeighborLookup[plotID].Contains(neighborPixelPlotID))
                             _plotNeighborLookup[plotID].Add(neighborPixelPlotID);
-                        }
                     }
                 }
             }
         }
 
+        private void TravelHeroTo(string commanderKey, Hero hero, Color32 source, Color32 target)
+        {
+            hero.MovementState = Hero.State.Traveling;
+
+            hero.PathProgress = 0f;
+            hero.PathIndex = 0;
+            hero.Path = GetPathAStar(source, target, commanderKey);
+
+        }
+
+        float lastPulseTime = 0f;
         public void OnUpdate(MapGameMatchRunner mainSystem)
         {
-            // TODO - Level X building upgrades?
-            // lvl3 should be the "tank" - it should punch through frontlines
-            
-            foreach (var commander in _commanders)
-            {
-                var buildingGeneration = 0f;
-                foreach (var controlledPlot in _commanderPlotLookup[commander.Key])
-                {
-                    var baseBuildingCount = _plots[controlledPlot].Building.CommanderID == commander.Key ? 1 : 0;
-                    buildingGeneration += baseBuildingCount;
-                }
-                commander.Value.ProductionProgress +=
-                    (commander.Value.ProductionStat / WorldConsts.MaxStat)
-                    * (buildingGeneration * _productionGenerationPerControlledPlot)
-                    * Time.deltaTime;
+            // all capitals start with an emitter
+            // emitters are idle across the map
+            // a hero capturing a plot captures the emitter
+            // emitters emit control/creep passively
 
-                if (commander.Value.ProductionProgress >= 1f)
-                {
-                    commander.Value.ProductionProgress = 0f;
+            var atWar = Input.GetKey(KeyCode.Space);
 
-                    // account for packets in transit
-                    var sentConstructionSupply = new Dictionary<Color32, float>();
-                    var sentBuildingSupply = new Dictionary<Color32, float>();
-                    var sentConstructionBegin = new Dictionary<Color32, bool>();
-                    foreach (var existingPacket in _packets)
-                    {
-                        if (existingPacket.CommanderID == commander.Key)
-                        {
-                            var target = existingPacket.Path[existingPacket.Path.Count - 1];
+            //if (Time.time - lastPulseTime > 0.25f)
+            //{
+            //    lastPulseTime = Time.time;
+            //    var colorList = new List<Color32>();
+            //    foreach(var plotKV in _plots)
+            //    {
+            //        var plotID = plotKV.Key;
+            //        var plot = plotKV.Value;
 
-                            if (existingPacket.MissionLogic == Packet.Mission.SupplyConstructionProject)
-                            {
-                                if (!sentConstructionSupply.ContainsKey(target))
-                                    sentConstructionSupply.Add(target, 0f);
-                                sentConstructionSupply[target] += _constructionSupplyPerPacket * commander.Value.ConstructionSupplyMultiplierStat;
-                            }
-                            if (existingPacket.MissionLogic == Packet.Mission.SupplyBuilding)
-                            {
-                                if (!sentBuildingSupply.ContainsKey(target))
-                                    sentBuildingSupply.Add(target, 0f);
-                                sentBuildingSupply[target] += _buildingSupplyPerPacket * commander.Value.ConstructionSupplyMultiplierStat;
-                            }
-                            if (existingPacket.MissionLogic == Packet.Mission.EstablishConstructionProject
-                                || existingPacket.MissionLogic == Packet.Mission.UpgradeBuildingLevel)
-                            {
-                                if (!sentConstructionBegin.ContainsKey(target))
-                                    sentConstructionBegin.Add(target, false);
-                                sentConstructionBegin[target] = true;
-                            }
-                            // we "lock" sending to both so that we don't end up constructing in either in the meantime
-                            if(existingPacket.MissionLogic == Packet.Mission.DowngradeAndRedeployBuildingLevel)
-                            {
-                                if (!sentConstructionBegin.ContainsKey(target))
-                                    sentConstructionBegin.Add(target, false);
-                                sentConstructionBegin[target] = true;
-
-                                if (!sentConstructionBegin.ContainsKey(existingPacket.AuxColor))
-                                    sentConstructionBegin.Add(existingPacket.AuxColor, false);
-                                sentConstructionBegin[existingPacket.AuxColor] = true;
-                            }
-                        }
-                    }
-
-                    // Produce Supply Packet
-                    var packet = new Packet { CommanderID = commander.Key };
+            //        if (plot.CreepControllerID == null) continue;
+            //        if (plot.CreepAmount < plot.MaxCreepAmount * 0.75f /*determines the "looseness" of the creep*/) continue;
                     
-                    var assigned = false;
-                    var plot = _plots[commander.Value.CapitalID];
+            //        if(plot.IsEmitter)
+            //            plotKV.Value.CreepAmount = math.clamp(plotKV.Value.CreepAmount + plotKV.Value.MaxCreepAmount * 0.2f, 0f, plotKV.Value.MaxCreepAmount) ;
 
-                    // TODO - some sort of structure that lets us extract the conditions/assignment logic and preferably prioritize them without depending on code order
+            //        colorList.Clear();
+            //        var toPropagate = plot.CreepAmount * 0.1f /*determines propagation throughput*/;
+            //        colorList = _plotNeighborLookup[plotID]
+            //            .Where(pIdx => _plots[pIdx].CreepControllerID == null 
+            //                            || IsAtWar(plot.CreepControllerID, _plots[pIdx].CreepControllerID)
+            //                            || (_plots[pIdx].CreepAmount < _plots[pIdx].MaxCreepAmount && _plots[pIdx].CreepControllerID == plot.CreepControllerID)).ToList();
 
-                    // Supply Capital Construction
-                    if (plot.ConstructionProjects.Count >= 1)
+            //        foreach (var neighborPlotIdx in colorList)
+            //        {
+            //            var neighborPlot = _plots[neighborPlotIdx];
+
+            //            var packet = new Packet { CommanderID = plot.CreepControllerID };
+            //            _packets.Add(packet);
+
+            //            packet.MissionLogic = Packet.Mission.AddCreep;
+            //            packet.Path = GetPathAStar(plotID, neighborPlotIdx, plot.CreepControllerID);
+            //            packet.AuxString = (toPropagate / colorList.Count+).ToString();
+            //        }
+
+            //    }
+            //}
+
+            foreach (var hero in _heroes)
+            {
+                if(hero.Value.MovementState == Hero.State.Traveling)
+                {
+                    if (hero.Value.PathIndex == hero.Value.Path.Count - 1)
                     {
-                        packet.MissionLogic = Packet.Mission.SupplyConstructionProject;
-                        packet.Path = GetPathAStar(commander.Value.CapitalID, commander.Value.CapitalID);
-
-                        assigned = true;
-                    }
-
-                    // Supply Capital Building
-                    if (!assigned)
-                    {
-                        if (plot.Building.Supply < plot.Building.MaxSupply)
-                        {
-                            packet.MissionLogic = Packet.Mission.SupplyBuilding;
-                            packet.Path = GetPathAStar(commander.Value.CapitalID, commander.Value.CapitalID);
-
-                            assigned = true;
-                        }
-                    }
-
-                    // Send Plot Building Supply
-                    if (!assigned)
-                    {
-                        // all commander's + neighbor plots with commander's construction sorted by supply progress
-                        var sortedPlots = _commanderPlotLookup[commander.Key]
-                            .OrderBy(pIdx =>
-                            {
-                                var building = _plots[pIdx].Building;
-
-                                if (!sentBuildingSupply.TryGetValue(pIdx, out var sentSupply))
-                                    sentSupply = 0f;
-
-                                return sentSupply / (building.MaxSupply - building.Supply);
-                            });
-
-                        foreach (var plotIdx in sortedPlots)
-                        {
-                            var buildingSupplyNeeded = 0f;
-                            if (_plots[plotIdx].Building != null)
-                            {
-                                if (_plots[plotIdx].Building.CommanderID == commander.Key
-                                && _plots[plotIdx].Building.Supply < _plots[plotIdx].Building.MaxSupply / 2f /*refill at half*/ )
-                                    buildingSupplyNeeded += _plots[plotIdx].Building.MaxSupply - _plots[plotIdx].Building.Supply;
-                            }
-
-                            if ((!sentBuildingSupply.TryGetValue(plotIdx, out var nodeSentSupplies) && buildingSupplyNeeded > 0f)
-                                || buildingSupplyNeeded > nodeSentSupplies)
-                            {
-                                packet.MissionLogic = Packet.Mission.SupplyBuilding;
-                                packet.Path = GetPathAStar(commander.Value.CapitalID, plotIdx);
-
-                                assigned = true;
-                                break;
-                            }
-                        }
-                    }
-
-                    // Construct Plot Turret
-                    if (!assigned)
-                    {
-                        var upgradeNeededPlots = _commanderPlotLookup[commander.Key]
-                            .Where(pIdx =>
-                                _plots[pIdx].Building.Level < 2
-                                && (!sentConstructionBegin.TryGetValue(pIdx, out var hasSent) || !hasSent)
-                                && _plots[pIdx].ConstructionProjects.Count(p => p.CommanderID == commander.Key) < 1)
-                            .Where(pIdx => {
-                                foreach (var neighborIdx in _plotNeighborLookup[pIdx])
-                                {
-                                    if (_plots[neighborIdx].Building != null
-                                        && _plots[neighborIdx].Building.CommanderID != commander.Key)
-                                    {
-                                        return true;                                        
-                                    }
-                                }
-                                return false;
-                            });
-
-                        var unusedTurretPlots = _commanderPlotLookup[commander.Key]
-                            .Where(pIdx =>
-                                _plots[pIdx].Building.Level >= 2
-                                && (!sentConstructionBegin.TryGetValue(pIdx, out var hasSent) || !hasSent))
-                            .Where(pIdx => {
-                                foreach (var neighborIdx in _plotNeighborLookup[pIdx])
-                                {
-                                    if (_plots[neighborIdx].Building != null
-                                        && _plots[neighborIdx].Building.CommanderID != commander.Key)
-                                    {
-                                        return false;
-                                    }
-                                }
-                                return true;
-                            });
-
-
-                        foreach (var plotIdx in upgradeNeededPlots)
-                        {
-                            // if we have a spare backline turret, we can send that instead
-                            if (unusedTurretPlots.Count() > 0)
-                            {
-                                var turretToMovePlotIdx = unusedTurretPlots.First();
-
-                                packet.MissionLogic = Packet.Mission.DowngradeAndRedeployBuildingLevel;
-                                packet.Path = GetPathAStar(commander.Value.CapitalID, turretToMovePlotIdx);
-                                packet.AuxColor = plotIdx;
-
-                                assigned = true;
-                                break;
-                            }
-
-                            packet.MissionLogic = Packet.Mission.EstablishConstructionProject;
-                            packet.Path = GetPathAStar(commander.Value.CapitalID, plotIdx);
-
-                            assigned = true;
-                            break;
-                        }
-                    }
-
-                    // Send Plot Construction Supply
-                    if (!assigned)
-                    {
-                        // all commander's + neighbor plots with commander's construction sorted by supply progress
-                        var sortedPlots = _commanderPlotLookup[commander.Key]
-                            .SelectMany(pIdx =>
-                            {
-                                var toAdd = new List<Color32>() { pIdx };
-                                toAdd.AddRange(_plotNeighborLookup[pIdx]);
-                                return toAdd;
-                            })
-                            .Distinct()
-                            .Where(pIdx => _plots[pIdx].ConstructionProjects.Count(project => project.CommanderID == commander.Key) > 0)
-                            .OrderBy(pIdx =>
-                            {
-                                var project = _plots[pIdx].ConstructionProjects.First(project => project.CommanderID == commander.Key);
-
-                                if (!sentConstructionSupply.TryGetValue(pIdx, out var sentSupply))
-                                    sentSupply = 0f;
-                                
-                                return sentSupply / (project.MaxSupply - project.Supply);
-                            });
-
-                        foreach (var plotIdx in sortedPlots)
-                        {
-                            var project = _plots[plotIdx].ConstructionProjects.First(p => p.CommanderID == commander.Key);
-                            var supplyNeeded = project.MaxSupply - project.Supply;
-                            if ((!sentConstructionSupply.TryGetValue(plotIdx, out var sentSupply) && supplyNeeded > 0)
-                                || supplyNeeded > sentSupply)
-                            {
-                                packet.MissionLogic = Packet.Mission.SupplyConstructionProject;
-                                packet.Path = GetPathAStar(commander.Value.CapitalID, plotIdx);
-
-                                assigned = true;
-
-                                break;
-                            }
-                        }
-                    }
-
-                    // Construct HQ In Empty Plot
-                    if (!assigned)
-                    {
-                        // collect all empty neighbor plots, order by # hostile plot neighbors
-                        var sortedNeighberEmptyPlots = _commanderPlotLookup[commander.Key]
-                            .SelectMany(pIdx => _plotNeighborLookup[pIdx])
-                            .Where(pIdx => _plots[pIdx].Building == null)
-                            .Distinct()
-                            .OrderBy(pIdx =>
-                            {
-                                var distanceRaw = Vector3.Distance(_plots[pIdx].PlotWorldCenter, plot.PlotWorldCenter);
-                                var maxDistanceForScaling = mainSystem.Map.width;
-                                var distanceFactor = (distanceRaw / maxDistanceForScaling);
-
-                                var maxEnemyNeighbors = 8;
-                                var enemyNeighors = 0;
-                                foreach (var neighborIdx in _plotNeighborLookup[pIdx])
-                                {
-                                    var building = _plots[neighborIdx].Building;
-                                    if (building == null) continue;
-                                    if (building.CommanderID == commander.Key) continue;
-
-                                    enemyNeighors += building.Level; // make settling near cannons less desirable
-                                }
-                                var enemyFactor = (enemyNeighors / _plotNeighborLookup[pIdx].Count);
-
-                                var distanceWeight = 0.7f;
-                                var enemyNeighborWeight = 0.3f;
-                                return (enemyFactor * enemyNeighborWeight)
-                                        + (distanceFactor * distanceWeight);
-                            });
-
-                        foreach (var plotIdx in sortedNeighberEmptyPlots)
-                        {
-                            // already sent packet
-                            if (sentConstructionBegin.TryGetValue(plotIdx, out var hasSent) && hasSent) continue;
-                            // already constructing
-                            if (_plots[plotIdx].ConstructionProjects.Count(p => p.CommanderID == commander.Key) > 0) continue; // akready building there
-
-                            packet.MissionLogic = Packet.Mission.EstablishConstructionProject;
-                            packet.Path = GetPathAStar(commander.Value.CapitalID, plotIdx);
-
-                            assigned = true;
-                            break;
-                        }
-                    }
-
-                    if (!assigned)
-                    {
-                        commander.Value.ProductionProgress = 1f;
+                        // arrived
+                        hero.Value.MovementState = Hero.State.Stationed;
                     }
                     else
                     {
-                        _packets.Add(packet);
+                        hero.Value.PathProgress += 1f * Time.deltaTime;
+                        if (hero.Value.PathProgress >= 1f)
+                        {
+                            hero.Value.PathProgress = 0f;
+                            hero.Value.PathIndex++;
+                            hero.Value.CurrentPlotIdx = hero.Value.Path[hero.Value.PathIndex];
+                        }
                     }
-                }
-            }
 
-            foreach(var plot in _plots)
-            {
-                if (plot.Value.Building != null)
+                    continue;
+                }
+                
+                var currentPlotKey = hero.Value.CurrentPlotIdx;
+                var currentPlot = _plots[currentPlotKey];
+                // use supply here or nah?
+                if(Time.time - hero.Value.LastActionTime > 0.5f)
                 {
-                    var plotBuilding = plot.Value.Building;
-                    if (plotBuilding.Level < 2) continue;
-                    if (Time.time - plotBuilding.LastActionTime < plotBuilding.ActionRate) continue;
+                    hero.Value.LastActionTime = Time.time;
 
-                    var supplyToUse = 1f;
-                    if (plotBuilding.Supply < supplyToUse) continue;
-
-                    // find a target
-
-                    var potentialTargets = _plotNeighborLookup[plot.Key]
-                        .Where(pIdx =>
-                                _plots[pIdx].Building != null
-                                && _plots[pIdx].Building.CommanderID != plotBuilding.CommanderID)
-                        .OrderByDescending(pIdx => _plots[pIdx].Building.Level);
-
-                    if (potentialTargets.Count() > 0)
+                    // account for packets in transit
+                    var creepSent = new Dictionary<Color32, float>();
+                    foreach (var existingPacket in _packets)
                     {
-                        var target = potentialTargets.First();
-                        plotBuilding.LastActionTime = Time.time;
-                        plotBuilding.Supply -= supplyToUse;
+                        if (existingPacket.CommanderID == hero.Key)
+                        {
+                            var target = existingPacket.Path[existingPacket.Path.Count - 1];
 
-                        var packet = new Packet { CommanderID = plotBuilding.CommanderID };
-                        _packets.Add(packet);
-
-                        packet.MissionLogic = Packet.Mission.AttackBuilding;
-                        packet.Path = GetPathAStar(plot.Key, target );
+                            if (existingPacket.MissionLogic == Packet.Mission.AddCreep)
+                            {
+                                if (!creepSent.ContainsKey(target))
+                                    creepSent.Add(target, 0f);
+                                creepSent[target] += float.Parse(existingPacket.AuxString);//* commander.Value.ConstructionSupplyMultiplierStat;
+                            }
+                        }
                     }
+
+                    var didAction = false;
+
+                    // Stationed Actions
+                    
+                    // Priority 1
+                        // Increase control in your current position
+                    //if (!didAction)
+                    //{
+                    //    if (currentPlot.CreepControllerID != hero.Key
+                    //        || currentPlot.CreepAmount < currentPlot.MaxCreepAmount)
+                    //    {
+                    //        var packet = new Packet { CommanderID = hero.Key };
+                    //        _packets.Add(packet);
+
+                    //        packet.MissionLogic = Packet.Mission.AddCreep;
+                    //        packet.Path = GetPathAStar(currentPlotKey, currentPlotKey, hero.Key);
+                    //        packet.AuxString = _creepSentPerPacket.ToString();
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // Relocation Actions
+
+                    // Priority 1 - Protect the Capital - Relocate to the capital if control < threshold
+                    //if (!didAction)
+                    //{
+                    //    var capitalPlotID = _commanders[hero.Key].CapitalID;
+                    //    var capitalPlot = _plots[capitalPlotID];
+                    //    if(!hero.Value.CurrentPlotIdx.Equals(capitalPlotID)
+                    //        && capitalPlot.CreepAmount < capitalPlot.MaxCreepAmount * 0.9f)
+                    //    {
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, capitalPlotID);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // Priority 2 - Declare War
+                    //if (!didAction)
+                    //{
+                    //    var totalCreep = _commanderPlotLookup[hero.Key].Sum(pIdx => _plots[pIdx].CreepAmount);
+                    //    foreach(var otherCommander in _commanders)
+                    //    {
+                    //        if (otherCommander.Key == hero.Key) continue;
+                    //        if (IsAtWar(otherCommander.Key, hero.Key)) continue;
+
+                    //        var totalEnemyCreep = _commanderPlotLookup[otherCommander.Key].Sum(pIdx => _plots[pIdx].CreepAmount);
+
+                    //        if(totalCreep >= totalEnemyCreep * 0.75f)
+                    //        {
+                    //            var war = new War { AggressorID = hero.Key, DefenderID = otherCommander.Key };
+                    //            _wars.Add(war);
+                    //            break;
+                    //        }
+                    //    }
+                    //    var capitalPlotID = _commanders[hero.Key].CapitalID;
+                    //    var capitalPlot = _plots[capitalPlotID];
+                    //    if (!hero.Value.CurrentPlotIdx.Equals(capitalPlotID)
+                    //        && capitalPlot.CreepAmount < capitalPlot.MaxCreepAmount * 0.9f)
+                    //    {
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, capitalPlotID);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // Priority x - uhhhh let's just go top off non-capital
+                    //if (!didAction)
+                    //{
+                    //    var plotIndices = _commanderPlotLookup[hero.Key].Where(pIdx => !pIdx.Equals(_commanders[hero.Key].CapitalID));
+                    //    foreach(var plotIdx in plotIndices)
+                    //    {
+                    //        var plot = _plots[plotIdx];
+                    //        if (!hero.Value.CurrentPlotIdx.Equals(plotIdx)
+                    //            && plot.CreepAmount < plot.MaxCreepAmount * 0.75f)
+                    //        {
+                    //            TravelHeroTo(hero.Key, hero.Value, currentPlotKey, plotIdx);
+
+                    //            didAction = true;
+                    //        }
+                    //    }
+                    //}
+
+                    // Try to attack enemies neighboring your current position
+                    //if (!didAction)
+                    //{
+                    //    var targets = _plotNeighborLookup[currentPlotKey].Where(pIdx => _heroes.Count(kv => kv.Key != hero.Key && kv.Value.CurrentPlotIdx.Equals(pIdx)) > 0);
+                    //    if (targets.Count() > 0)
+                    //    {
+                    //        var target = targets.First();
+
+                    //        var packet = new Packet { CommanderID = hero.Key };
+                    //        _packets.Add(packet);
+
+                    //        packet.MissionLogic = Packet.Mission.AttackHero;
+                    //        packet.Path = GetPathAStar(currentPlotKey, target, hero.Key);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+
+                    // Try to send creep to empty neighbor
+                    //if (!didAction)
+                    //{
+                    //    var targets = _plotNeighborLookup[currentPlotKey]
+                    //        .Where(pIdx => (_plots[pIdx].CreepControllerID == null || _plots[pIdx].CreepControllerID == hero.Key) && _plots[pIdx].CreepAmount < _plots[pIdx].MaxCreepAmount)
+                    //        .Where(pIdx => !creepSent.TryGetValue(pIdx, out var sentAmount) || sentAmount + _plots[pIdx].CreepAmount < _plots[pIdx].MaxCreepAmount)
+                    //        .OrderByDescending(pIdx => {
+                    //            var amount = _plots[pIdx].CreepAmount;
+                    //            if (creepSent.TryGetValue(pIdx, out var sent))
+                    //                amount += sent;
+                    //            var creepAmountFactor = amount / _plots[pIdx].MaxCreepAmount;
+                    //            var distanceFactor = Vector3.Distance(_plots[pIdx].PlotWorldCenter, currentPlot.PlotWorldCenter) / mainSystem.Map.width;
+
+                    //            return (creepAmountFactor * 0.25f) + (distanceFactor * 0.75f); 
+                    //        });
+
+                    //    if(targets.Count() > 0)
+                    //    {
+                    //        var target = targets.First();
+
+                    //        var packet = new Packet { CommanderID = hero.Key };
+                    //        _packets.Add(packet);
+
+                    //        packet.MissionLogic = Packet.Mission.AddCreep;
+                    //        packet.Path = GetPathAStar(currentPlotKey, target, hero.Key);
+                    //        TODO amount
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // Try to send creep to occupied neighbor
+                    //if (!didAction)
+                    //{
+                    //    var targets = _plotNeighborLookup[currentPlotKey]
+                    //        .Where(pIdx => _plots[pIdx].CreepControllerID != hero.Key)
+                    //        //.Where(pIdx => !creepSent.TryGetValue(pIdx, out var sentAmount) || sentAmount + _plots[pIdx].CreepAmount < _plots[pIdx].MaxCreepAmount)
+                    //        .OrderByDescending(pIdx => {
+                    //            var amount = _plots[pIdx].CreepAmount;
+                    //            if (creepSent.TryGetValue(pIdx, out var sent))
+                    //                amount += sent;
+                    //            var creepAmountFactor = amount / _plots[pIdx].MaxCreepAmount;
+                    //            var distanceFactor = Vector3.Distance(_plots[pIdx].PlotWorldCenter, currentPlot.PlotWorldCenter) / mainSystem.Map.width;
+
+                    //            return (creepAmountFactor * 0.75f) + (distanceFactor * 0.25f);
+                    //        });
+
+                    //    if (targets.Count() > 0)
+                    //    {
+                    //        var target = targets.First();
+
+                    //        var packet = new Packet { CommanderID = hero.Key };
+                    //        _packets.Add(packet);
+
+                    //        packet.MissionLogic = Packet.Mission.AddCreep;
+                    //        packet.Path = GetPathAStar(currentPlotKey, target, hero.Key);
+                    //        TODO amount  
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // RELOCATE - To a virgin plot
+                    //if (!didAction)
+                    //{
+                    //    // account for another hero traveling to that plot
+                    //    // account for another hero present at that plot
+                    //    var potentialTargets = _commanderPlotLookup[hero.Key]
+                    //        .SelectMany(pIdx => _plotNeighborLookup[pIdx])
+                    //        .Distinct()
+                    //        .Where(pIdx => !pIdx.Equals(hero.Value.CurrentPlotIdx)
+                    //            && _plots[pIdx].CreepControllerID == null
+                    //            // no hero traveling to this location
+                    //            && _heroes.Count(h => h.Value.MovementState == Hero.State.Traveling && pIdx.Equals(h.Value.Path[h.Value.Path.Count-1])) == 0
+                    //            // hero stationed at this location
+                    //            && _heroes.Count(h => h.Value.MovementState == Hero.State.Stationed && h.Value.CurrentPlotIdx.Equals(pIdx)) == 0);
+
+                    //    if (potentialTargets.Count() > 0)
+                    //    {
+                    //        var target = potentialTargets.First();
+
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, target);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    //// RELOCATE - To an enemy plot
+                    //if (!didAction)
+                    //{
+                    //    var potentialTargets = _commanderPlotLookup[hero.Key]
+                    //        .SelectMany(pIdx => _plotNeighborLookup[pIdx])
+                    //        .Distinct()
+                    //        .Where(pIdx => !pIdx.Equals(hero.Value.CurrentPlotIdx)
+                    //            && _plots[pIdx].CreepControllerID != null && _plots[pIdx].CreepControllerID != hero.Key);
+
+                    //    if (potentialTargets.Count() > 0)
+                    //    {
+                    //        var target = potentialTargets.First();
+
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, target);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    //// RELOCATE - To a controlled plot we can attack neighboring creep from
+                    //if (!didAction)
+                    //{
+                    //    var potentialTargets = _commanderPlotLookup[hero.Key]
+                    //        .Where(pIdx => 
+                    //        _plotNeighborLookup[pIdx].Count(nIdx => _plots[nIdx].CreepControllerID != null 
+                    //            && !_plots[nIdx].CreepControllerID.Equals(hero.Key)
+                    //            && _heroes.Count(h => h.Value.CurrentPlotIdx.Equals(nIdx))  == 0) > 0);
+
+                    //    if (potentialTargets.Count() > 0)
+                    //    {
+                    //        var target = potentialTargets.First();
+
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, target);
+
+                    //        didAction = true;
+                    //    }
+                    //}
                 }
+
+
+
+                // what does a hero actually do?
+                // creates and sends attack packets
+                // will attack any enemy in a neighboring plot
+
+                // how often should heroes make decisions?
+                // continuously
+                // may get hyper-frequent behavior changes
+                // at x rate
+                // smoother
+                // manipulable rate
+
+                // i stand in my starting province
+                // i have no enemy neighbors
+                // i want to capture neighbor empty territory        
+                // what does capturing land give me?
+                // - increased "decision speed" (fmrly Prodction)
+
+
+
+
+
+                // later...
+                // i have enemy neighbors
+                // i want to destroy my enemies
             }
 
             var toDestroy = new List<Packet>();
             var toAdd = new List<Packet>();
+            var heroesToDestroy = new List<string>();
             foreach (var packet in _packets)
             {
                 // arrived
@@ -548,18 +598,18 @@ namespace bet_slum.Games.MapGame.Simulation
                 {
                     toDestroy.Add(packet);
 
-                    var plotIndex = packet.Path[packet.PathIndex];
-                    var plot = _plots[plotIndex];
+                    var currentPlotIndex = packet.Path[packet.PathIndex];
+                    var currentPlot = _plots[currentPlotIndex];
                     if (packet.MissionLogic == Packet.Mission.EstablishConstructionProject)
                     {
-                        if (plot.Building != null && packet.CommanderID != plot.Building.CommanderID)
+                        if (currentPlot.Building != null && packet.CommanderID != currentPlot.Building.CommanderID)
                         {
                             Debug.Log("Trying to establish a construction project in controlled enemy territory");
                             continue;
                         }
 
                         var supplyNeeded = _buildingLevel1ConstructionSupply;
-                        if (plot.Building != null && plot.Building.CommanderID == packet.CommanderID)
+                        if (currentPlot.Building != null && currentPlot.Building.CommanderID == packet.CommanderID)
                         {
                             // level 2
                             supplyNeeded = _buildingLevel2ConstructionSupply;
@@ -571,22 +621,22 @@ namespace bet_slum.Games.MapGame.Simulation
                             CommanderID = packet.CommanderID,
                             MaxSupply = supplyNeeded
                         };
-                        plot.ConstructionProjects.Add(project);
+                        currentPlot.ConstructionProjects.Add(project);
                     }
                     else if (packet.MissionLogic == Packet.Mission.SupplyConstructionProject)
                     {
-                        foreach (var project in plot.ConstructionProjects)
+                        foreach (var project in currentPlot.ConstructionProjects)
                         {
                             if (project.CommanderID != packet.CommanderID) continue;
 
                             project.Supply = math.clamp(project.Supply + _constructionSupplyPerPacket * _commanders[project.CommanderID].ConstructionSupplyMultiplierStat, 0f, project.MaxSupply);
                             if (project.Supply >= project.MaxSupply)
                             {
-                                plot.ConstructionProjects.Remove(project);
-                                if (plot.Building == null) // spawn level 1
+                                currentPlot.ConstructionProjects.Remove(project);
+                                if (currentPlot.Building == null) // spawn level 1
                                 {
-                                    _commanderPlotLookup[project.CommanderID].Add(plotIndex);
-                                    plot.Building = new Building 
+                                    _commanderPlotLookup[project.CommanderID].Add(currentPlotIndex);
+                                    currentPlot.Building = new Building 
                                     { 
                                         CommanderID = packet.CommanderID, 
                                         HP = _buildingLevel1HP, 
@@ -598,18 +648,18 @@ namespace bet_slum.Games.MapGame.Simulation
 
                                     // Destroy others constructing in plot
                                     var projectsToDestroy = new List<ConstructionProject>();
-                                    foreach (var otherProject in plot.ConstructionProjects)
+                                    foreach (var otherProject in currentPlot.ConstructionProjects)
                                     {
                                         if (otherProject.CommanderID == project.CommanderID) continue;
 
                                         projectsToDestroy.Add(otherProject);
                                     }
                                     foreach (var otherProject in projectsToDestroy)
-                                        plot.ConstructionProjects.Remove(otherProject);
+                                        currentPlot.ConstructionProjects.Remove(otherProject);
                                 }
                                 else // upgrade to level 2
                                 {
-                                    UpgradePlotBuilding(plot);
+                                    UpgradePlotBuilding(currentPlot);
                                 }
                             }
                             break;
@@ -617,63 +667,84 @@ namespace bet_slum.Games.MapGame.Simulation
                     }
                     else if (packet.MissionLogic == Packet.Mission.SupplyBuilding)
                     {
-                        if (plot.Building != null)
+                        if (currentPlot.Building != null)
                         {
-                            var building = plot.Building;
+                            var building = currentPlot.Building;
                             if (building.Supply >= building.MaxSupply || building.CommanderID != packet.CommanderID) continue;
 
                             building.Supply = math.clamp(building.Supply + _buildingSupplyPerPacket * _commanders[packet.CommanderID].ConstructionSupplyMultiplierStat, 0f, building.MaxSupply);
-                            break;
+                            continue;
                         }
                     }
-                    else if (packet.MissionLogic == Packet.Mission.AttackBuilding)
+                    else if (packet.MissionLogic == Packet.Mission.AttackHero)
                     {
-                        if (plot.Building != null)
+                        // note - this is not checking the actual hero's position
+                        if(_heroes.Count(h => h.Key != packet.CommanderID && h.Value.CurrentPlotIdx.Equals(currentPlotIndex)) > 0)
                         {
-                            var building = plot.Building;
-                            if (building.CommanderID == packet.CommanderID) continue;
-
-                            building.HP -= _buildingDamagePerPacket * _commanders[packet.CommanderID].AttackDamageMultiplierStat;
-                            if (building.HP <= 0f)
+                            var heroToAttack = _heroes.FirstOrDefault(h => h.Key != packet.CommanderID && h.Value.CurrentPlotIdx.Equals(currentPlotIndex));
+                            heroToAttack.Value.HP = math.clamp(heroToAttack.Value.HP - 10f, 0f, heroToAttack.Value.HPMax);
+                            if(heroToAttack.Value.HP <= 0)
                             {
-                                // find them a new capital if necessary
-                                if(_commanders[building.CommanderID].CapitalID.Equals(plotIndex))
-                                {
-                                    foreach (var plotID in _commanderPlotLookup[plot.Building.CommanderID])
-                                    {
-                                        if (plotID.Equals(plotIndex)) continue;
-
-                                        _commanders[plot.Building.CommanderID].CapitalID = plotID;
-                                        break;
-                                    }
-                                }
-                                _commanderPlotLookup[plot.Building.CommanderID].Remove(plotIndex);
-
-                                // Destroy all current construction projects (maybe not needed?)
-                                var toRm = new List<ConstructionProject>();
-                                foreach (var project in plot.ConstructionProjects)
-                                {
-                                    toRm.Add(project);
-                                }
-                                foreach (var project in toRm)
-                                    plot.ConstructionProjects.Remove(project);
-
-                                // destroy
-                                plot.Building = null;
+                                // DIE
+                                //heroToAttack.Value.Disabled = true;
+                                heroesToDestroy.Add(heroToAttack.Key);
                             }
                         }
+                        continue;
+                    }
+                    else if(packet.MissionLogic == Packet.Mission.AddCreep)
+                    {
+                        var amountToAdd = float.Parse(packet.AuxString);
+                        // if we control it, just add to count
+                        // if not, we subtract to 0. if we have any left, we take control w that amount
+
+                        // it's neutral
+                        if (currentPlot.CreepControllerID == null) 
+                        {
+                            currentPlot.CreepControllerID = packet.CommanderID;
+                            _commanderPlotLookup[packet.CommanderID].Add(currentPlotIndex);
+                        }
+                        // it's yours
+                        else if (packet.CommanderID == currentPlot.CreepControllerID)
+                        {
+                            currentPlot.CreepAmount = math.clamp(currentPlot.CreepAmount + amountToAdd, 0f, currentPlot.MaxCreepAmount);
+                        }
+                        else
+                        {
+                            if(currentPlot.CreepAmount > amountToAdd)
+                            {
+                                currentPlot.CreepAmount = math.clamp(currentPlot.CreepAmount - amountToAdd, 0f, currentPlot.MaxCreepAmount);
+                            }
+                            else
+                            {
+                                _commanderPlotLookup[currentPlot.CreepControllerID].Remove(currentPlotIndex);
+                                amountToAdd -= currentPlot.CreepAmount;
+                                if(amountToAdd > 0f)
+                                {
+                                    currentPlot.CreepAmount = amountToAdd;
+                                    currentPlot.CreepControllerID = packet.CommanderID;
+                                    _commanderPlotLookup[packet.CommanderID].Add(currentPlotIndex);
+                                }
+                                else
+                                {
+                                    currentPlot.CreepAmount = 0f;
+                                    currentPlot.CreepControllerID = null;
+                                }
+                            }
+                        }
+                        continue;
                     }
                     else if(packet.MissionLogic == Packet.Mission.DowngradeAndRedeployBuildingLevel)
                     {
-                        if(plot.Building != null && packet.CommanderID == plot.Building.CommanderID)
+                        if(currentPlot.Building != null && packet.CommanderID == currentPlot.Building.CommanderID)
                         {
                             var targetPlotID = packet.AuxColor;
-                            var turretPlot = _plots[plotIndex];
+                            var turretPlot = _plots[currentPlotIndex];
                             DowngradePlotBuilding(turretPlot);
 
                             var newPacket = new Packet { CommanderID = packet.CommanderID };
                             newPacket.MissionLogic = Packet.Mission.UpgradeBuildingLevel;
-                            newPacket.Path = GetPathAStar(plotIndex, targetPlotID);
+                            newPacket.Path = GetPathAStar(currentPlotIndex, targetPlotID, packet.CommanderID);
                             
                             toAdd.Add(newPacket);
                         }
@@ -681,15 +752,15 @@ namespace bet_slum.Games.MapGame.Simulation
                     }
                     else if (packet.MissionLogic == Packet.Mission.UpgradeBuildingLevel)
                     {
-                        if(plot.Building != null && plot.Building.CommanderID == packet.CommanderID)
+                        if(currentPlot.Building != null && currentPlot.Building.CommanderID == packet.CommanderID)
                         {
-                            UpgradePlotBuilding(plot);
+                            UpgradePlotBuilding(currentPlot);
                         }
                     }
                 }
                 else
                 {
-                    var relevantStat = packet.MissionLogic == Packet.Mission.AttackBuilding ? _commanders[packet.CommanderID].AttackDamageMultiplierStat : _commanders[packet.CommanderID].PacketSpeedStat;
+                    var relevantStat = packet.MissionLogic == Packet.Mission.AttackHero ? _commanders[packet.CommanderID].AttackDamageMultiplierStat : _commanders[packet.CommanderID].PacketSpeedStat;
                     packet.PathProgress += relevantStat * Time.deltaTime;
                     if (packet.PathProgress >= 1f)
                     {
@@ -702,11 +773,15 @@ namespace bet_slum.Games.MapGame.Simulation
                 _packets.Add(packet);
             foreach (var packet in toDestroy)
                 _packets.Remove(packet);
+            foreach(var commanderKey in heroesToDestroy)
+                _heroes.Remove(commanderKey);
         }
 
         private List<Color32> GetPathAStar(
             Color32 startPlotKey,
-            Color32 destinationPlotKey)
+            Color32 destinationPlotKey,
+            string commander = null,
+            bool forceFriendly = true)
         {
             var frontier = new PriorityQueue<Color32>();
             frontier.Enqueue(startPlotKey, 0f);
@@ -725,8 +800,11 @@ namespace bet_slum.Games.MapGame.Simulation
                 {
                     if (neighborIdx.Equals(DeadPlotID)) continue;
 
+                    
+
                     var newCost = costSoFar[currentPlotKey];
                     //+ math.distance(currentPlotKey, neighbor);
+                    
 
                     if (!costSoFar.ContainsKey(neighborIdx)
                         || newCost < costSoFar[neighborIdx])
@@ -737,6 +815,12 @@ namespace bet_slum.Games.MapGame.Simulation
                             return math.abs(a.x - b.x) +
                                    math.abs((a.y - b.y));
                         };
+
+                        if (forceFriendly 
+                            && commander != null
+                            && _plots[neighborIdx].CreepControllerID != commander)
+                            newCost = float.MaxValue;
+                        
                         frontier.Enqueue(neighborIdx, newCost /*+ heuristic(destinationCoordinates, neighbor)*/);
                         cameFrom[neighborIdx] = currentPlotKey;
                     }

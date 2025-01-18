@@ -10,7 +10,8 @@ namespace bet_slum.Games.MapGame.Simulation.EntityArchetypes
             EstablishConstructionProject,
             SupplyConstructionProject,
             SupplyBuilding,
-            AttackBuilding,
+            AttackHero,
+            AddCreep,
             DowngradeAndRedeployBuildingLevel,
             UpgradeBuildingLevel
         }

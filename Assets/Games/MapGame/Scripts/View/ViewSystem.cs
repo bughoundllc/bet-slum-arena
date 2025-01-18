@@ -16,6 +16,9 @@ namespace bet_slum.Games.MapGame.View
         private ObjectPool<CompetitorInfoUI> _competitorWidgetPool;
         private Dictionary<string, CompetitorInfoUI> _competitorLabels = new();
 
+        private ObjectPool<GameObject> _heroViewPool;
+        private Dictionary<string, GameObject> _heroViews = new();
+
         private ObjectPool<GameObject> _plotBuildingViewPool;
         private Dictionary<Color32, GameObject> _plotBuildingViews = new();
 
@@ -32,6 +35,9 @@ namespace bet_slum.Games.MapGame.View
 
             if (_competitorWidgetPool == null)
                 _competitorWidgetPool = new(() => GameObject.Instantiate(mainSystem.CompetitorLabelPrototype, mainSystem.CompetitorLabelPrototype.transform.parent), label => label.gameObject.SetActive(true), label => label.gameObject.SetActive(false), label => GameObject.Destroy(label.gameObject));
+            
+            if (_heroViewPool == null)
+                _heroViewPool= new(() => GameObject.Instantiate(mainSystem.HeroViewUI, mainSystem.HeroViewUI.transform.parent), view => view.gameObject.SetActive(true), view => view.gameObject.SetActive(false), view => GameObject.Destroy(view.gameObject));
 
             if (_packetViewPool == null)
             {
@@ -82,6 +88,7 @@ namespace bet_slum.Games.MapGame.View
             mainSystem.CompetitorLabelPrototype.gameObject.SetActive(false); 
             mainSystem.PacketViewPrototype.gameObject.SetActive(false);
             mainSystem.BuildingViewPrototype.gameObject.SetActive(false);
+            mainSystem.HeroViewUI.gameObject.SetActive(false);
 
             mainSystem.MapMesh.Initialize(new int2(mainSystem.Map.width, mainSystem.Map.height), mainSystem.Map);
         }
@@ -105,6 +112,7 @@ namespace bet_slum.Games.MapGame.View
 
         public void OnUpdate(MapGameMatchRunner mainSystem)
         {
+            var camera = Camera.main;
             //Debug.Log("View Update");
             foreach(var widget in _plotInfoUIWidgets)
                 _plotInfoWidgetPool.Release(widget);
@@ -121,27 +129,27 @@ namespace bet_slum.Games.MapGame.View
                     widget.Slider.fillRect.transform.GetComponentInChildren<Image>().color = mainSystem.SimulationSystem.Commanders[project.CommanderID].TestData.DisplayColor;
                     widget.Slider.value = project.Supply / project.MaxSupply;
 
-                    widget.transform.position = Camera.main.WorldToScreenPoint(plot.Value.PlotWorldCenter + buildingWorldPositions[buildingPositionIdx++]);
+                    widget.transform.position = camera.WorldToScreenPoint(plot.Value.PlotWorldCenter + buildingWorldPositions[buildingPositionIdx++]);
                 }
 
-                if(!_plotBuildingViews.TryGetValue(plot.Key, out var view))
-                {
-                    view = _plotBuildingViewPool.Get();
-                    view.transform.position = plot.Value.PlotWorldCenter;
-                    _plotBuildingViews.Add(plot.Key, view);
-                }
+                //if(!_plotBuildingViews.TryGetValue(plot.Key, out var view))
+                //{
+                //    view = _plotBuildingViewPool.Get();
+                //    view.transform.position = plot.Value.PlotWorldCenter;
+                //    _plotBuildingViews.Add(plot.Key, view);
+                //}
                 
-                if(plot.Value.Building == null
-                    || plot.Value.Building.Level < 2)
-                {
-                    view.gameObject.SetActive(false);
-                }
-                else
-                {
-                    view.gameObject.SetActive(true); 
-                    view.GetComponent<Renderer>().material.color = Color.Lerp(new Color(249f / 256f, 180f / 256f, 45f / 256f), Color.white, math.clamp((Time.time - plot.Value.Building.LastActionTime) / plot.Value.Building.ActionRate, 0f, 1f));
+                //if(plot.Value.Building == null
+                //    || plot.Value.Building.Level < 2)
+                //{
+                //    view.gameObject.SetActive(false);
+                //}
+                //else
+                //{
+                //    view.gameObject.SetActive(true); 
+                //    view.GetComponent<Renderer>().material.color = Color.Lerp(new Color(249f / 256f, 180f / 256f, 45f / 256f), Color.white, math.clamp((Time.time - plot.Value.Building.LastActionTime) / plot.Value.Building.ActionRate, 0f, 1f));
 
-                }
+                //}
             }
 
             foreach (var view in _packetViews)
@@ -156,24 +164,25 @@ namespace bet_slum.Games.MapGame.View
                 var targetPlotCenter = packet.PathIndex == packet.Path.Count - 1 ? currentPlotCenter : mainSystem.SimulationSystem.Plots[packet.Path[packet.PathIndex + 1]].PlotWorldCenter;
                 var progressPosition = Vector3.Lerp(currentPlotCenter, targetPlotCenter, packet.PathProgress / 1f);
                 view.transform.position = progressPosition;
-                view.GetComponent<Renderer>().material.color = packet.MissionLogic == Packet.Mission.AttackBuilding
+                view.GetComponent<Renderer>().material.color = packet.MissionLogic == Packet.Mission.AttackHero
                     ? Color.red
                     : (packet.MissionLogic == Packet.Mission.DowngradeAndRedeployBuildingLevel || packet.MissionLogic == Packet.Mission.UpgradeBuildingLevel)
                         ? Color.Lerp(Color.yellow, mainSystem.SimulationSystem.Commanders[packet.CommanderID].TestData.DisplayColor, 0.5f)
-                        : Color.Lerp(Color.white, mainSystem.SimulationSystem.Commanders[packet.CommanderID].TestData.DisplayColor, 0.7f);
+                        : Color.Lerp(Color.white, mainSystem.SimulationSystem.Commanders[packet.CommanderID].TestData.DisplayColor, 0.8f);
                 view.transform.localScale = Vector3.one * 
-                    (packet.MissionLogic == Packet.Mission.AttackBuilding 
+                    (packet.MissionLogic == Packet.Mission.AttackHero 
                     ? 10f 
                     : packet.MissionLogic == Packet.Mission.UpgradeBuildingLevel || packet.MissionLogic == Packet.Mission.DowngradeAndRedeployBuildingLevel 
                         ? 8.5f
-                        : 7f);
+                        : 2f);
             }
 
             foreach (var commander in mainSystem.SimulationSystem.Commanders)
             {
                 var competitor = mainSystem.CompetitorData.GetCompetitorData(commander.Value.CompetitorID);
 
-                if (!_competitorLabels.TryGetValue(commander.Value.CompetitorID, out var widget))
+                if (!_competitorLabels.TryGetValue(commander.Value.CompetitorID, out var widget)
+                    || !_heroViews.TryGetValue(commander.Value.CompetitorID, out var heroView))
                 {
                     widget = _competitorWidgetPool.Get();
                     _competitorLabels.Add(commander.Value.CompetitorID, widget);
@@ -185,19 +194,48 @@ namespace bet_slum.Games.MapGame.View
                     widget.ProductionDisplay.fillRect.transform.GetComponentInChildren<Image>().color 
                         = Color.Lerp(Color.white, commander.Value.TestData.DisplayColor, 0.5f);
 
+                    heroView = _heroViewPool.Get();
+                    _heroViews.Add(commander.Value.CompetitorID, heroView);
                 }
 
-                if (mainSystem.SimulationSystem.CommanderPlotLookup[commander.Key].Count <= 0)
-                {
-                    widget.gameObject.SetActive(false);
-                    continue;
-                }
+
+                //if (mainSystem.SimulationSystem.CommanderPlotLookup[commander.Key].Count <= 0)
+                //{
+                //    widget.gameObject.SetActive(false);
+                //    continue;
+                //}
 
                 var capitalWorldPosition = mainSystem.SimulationSystem.Plots[commander.Value.CapitalID].PlotWorldCenter;
-                widget.transform.position = Camera.main.WorldToScreenPoint(capitalWorldPosition);
+                widget.transform.position = camera.WorldToScreenPoint(capitalWorldPosition);
                 widget.transform.position -= Vector3.up * 25f;
 
-                widget.ProductionDisplay.value = commander.Value.ProductionProgress / 1f;
+                if (mainSystem.SimulationSystem.Heroes.ContainsKey(commander.Key))
+                {
+                    heroView.gameObject.SetActive(true);
+
+                    var hero = mainSystem.SimulationSystem.Heroes[commander.Key];
+                    if (hero.MovementState == Hero.State.Stationed)
+                    {
+                        heroView.transform.position = camera.WorldToScreenPoint(mainSystem.SimulationSystem.Plots[hero.CurrentPlotIdx].PlotWorldCenter);
+                        widget.transform.position = camera.WorldToScreenPoint(mainSystem.SimulationSystem.Plots[hero.CurrentPlotIdx].PlotWorldCenter);
+                    }
+                    else if(hero.MovementState == Hero.State.Traveling)
+                    {
+                        var currentPlotCenter = mainSystem.SimulationSystem.Plots[hero.Path[hero.PathIndex]].PlotWorldCenter;
+                        var targetPlotCenter = hero.PathIndex == hero.Path.Count - 1 ? currentPlotCenter : mainSystem.SimulationSystem.Plots[hero.Path[hero.PathIndex + 1]].PlotWorldCenter;
+                        var progressPosition = Vector3.Lerp(currentPlotCenter, targetPlotCenter, hero.PathProgress / 1f);
+                        heroView.transform.position = camera.WorldToScreenPoint(progressPosition);
+                        widget.transform.position = camera.WorldToScreenPoint(progressPosition);
+                    }
+
+                    widget.ProductionDisplay.value = hero.HP / hero.HPMax;
+                }
+                else
+                {
+                    heroView.gameObject.SetActive(false);
+                    widget.gameObject.SetActive(false);
+                }
+
             }
         }
     }

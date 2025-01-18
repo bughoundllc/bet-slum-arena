@@ -11,5 +11,14 @@ namespace bet_slum.Games.MapGame.Simulation.EntityArchetypes
         // State
         public Building Building;
         public List<ConstructionProject> ConstructionProjects = new();
+        public bool IsEmitter = false;
+
+
+
+
+        // NEW
+        public float CreepAmount;
+        public float MaxCreepAmount = 100f;
+        public string CreepControllerID;
     }
 }
