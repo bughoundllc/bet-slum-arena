@@ -26,6 +26,8 @@ namespace bet_slum.CombatArena
             _matchVictor == _agentA ? 0 : _matchVictor == _agentB ? 1 : -1;
         private ArenaAgent _matchVictor;
 
+        public override int MaxCompetitorCount => 2;
+
         public override async Awaitable InitializeMatchEnvironment()
         {
             Debug.Log("MR: Initialize Match");
@@ -40,7 +42,7 @@ namespace bet_slum.CombatArena
             _agentB.OnDamageTaken.AddListener(_healthBarB.UpdateAgentHP);
             _agentB.OnInitialized.AddListener(_healthBarB.UpdateAgentHP);
 
-            InitializeMatchCompetitors();
+            await InitializeMatchCompetitors();
         }
 
         public override async Awaitable InitializeMatchCompetitors()

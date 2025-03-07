@@ -18,13 +18,15 @@ namespace bet_slum.Games.MapGame.View
 
         private MeshFilter _filter;
         private MeshRenderer _renderer;
+        private Texture2D _modifiedTexture;
 
         private Dictionary<Color32, Color32> _lastPlotColor = new();
         // TODO - split this logic up
         public void UpdateControlledMapView(MapGameMatchRunner mainSystem)
         {
+            return;
             Profiler.BeginSample("Get pixels");
-            var pixels = mainSystem.Map.GetPixels32();
+            var pixels = _modifiedTexture.GetPixels32();
             Profiler.EndSample();
 
             //var mapPixels = GameRunner.Instance.
@@ -34,7 +36,7 @@ namespace bet_slum.Games.MapGame.View
             {
                 if (plot.Key.Equals(SimulationSystem.DeadPlotID)) continue;
                 // if owner/color has changed, we update those pixels only
-                var plotColor = (Color32)Color.white;
+                var plotColor = new Color32(0,200,0,255);
                 if (plot.Value.CreepControllerID != null) 
                 {
                     var hpPct = plot.Value.CreepAmount / plot.Value.MaxCreepAmount;
@@ -103,7 +105,24 @@ namespace bet_slum.Games.MapGame.View
             _filter.mesh = _mesh;
 
             var material = Material.Instantiate(_renderer.material);
-            material.mainTexture = Texture2D.Instantiate(texture);
+            _modifiedTexture = Texture2D.Instantiate(texture);
+            var txPixels = _modifiedTexture.GetPixels32();
+            // data-process map, unnecessary later just wanna color the "dead plot"
+            for(int i = 0; i < txPixels.Length; i++)
+            {
+                if (txPixels[i].Equals(SimulationSystem.DeadPlotID))
+                {
+                    txPixels[i] = new Color32(0,0,200, 255);
+                }
+                else
+                {
+                    txPixels[i] = new Color32(0, (byte)(200 * UnityEngine.Random.Range(0.75f, 1f)), 0, 255);
+                }
+            }
+            _modifiedTexture.SetPixels32(txPixels);
+            _modifiedTexture.Apply();
+
+            material.mainTexture = _modifiedTexture;
             _renderer.material = material;
         }
 

@@ -25,6 +25,9 @@ namespace bet_slum.Games.MapGame.View
         private ObjectPool<GameObject> _packetViewPool;
         private List<GameObject> _packetViews = new();
 
+        private ObjectPool<GameObject> _monsterViewPool;
+        private List<GameObject> _monsterViews = new();
+
         private List<LineRenderer> _roadViews = new();
 
         public void Initialize(MapGameMatchRunner mainSystem)
@@ -38,6 +41,9 @@ namespace bet_slum.Games.MapGame.View
             
             if (_heroViewPool == null)
                 _heroViewPool= new(() => GameObject.Instantiate(mainSystem.HeroViewUI, mainSystem.HeroViewUI.transform.parent), view => view.gameObject.SetActive(true), view => view.gameObject.SetActive(false), view => GameObject.Destroy(view.gameObject));
+
+            if (_monsterViewPool == null)
+                _monsterViewPool = new(() => GameObject.Instantiate(mainSystem.MonsterView, mainSystem.MonsterView.transform.parent), view => view.gameObject.SetActive(true), view => view.gameObject.SetActive(false), view => GameObject.Destroy(view.gameObject));
 
             if (_packetViewPool == null)
             {
@@ -75,11 +81,19 @@ namespace bet_slum.Games.MapGame.View
 
                     // spawn pair road
                     var road = GameObject.Instantiate(mainSystem.RoadPrototype, mainSystem.RoadPrototype.transform.parent);
-                    road.SetPosition(0, mainSystem.SimulationSystem.Plots[plotNeighbors.Key].PlotWorldCenter);
-                    road.SetPosition(1, mainSystem.SimulationSystem.Plots[target].PlotWorldCenter);
+                    road.SetPosition(0, mainSystem.SimulationSystem.Plots[plotNeighbors.Key].PlotWorldCenter + Vector3.up * 1f);
+                    road.SetPosition(1, mainSystem.SimulationSystem.Plots[target].PlotWorldCenter + Vector3.up * 1f);
                     _roadViews.Add(road);
                     shownPairs.Add((plotNeighbors.Key, target));
                 }
+            }
+
+            // destroy x roads, just visual fun for now
+            var shuffled = _roadViews.Shuffle().ToList();
+            for(int i = 0; i < shuffled.Count * 0.5; i++)
+            {
+                _roadViews.Remove(shuffled[i]);
+                GameObject.Destroy(shuffled[i]);
             }
 
 
@@ -89,6 +103,7 @@ namespace bet_slum.Games.MapGame.View
             mainSystem.PacketViewPrototype.gameObject.SetActive(false);
             mainSystem.BuildingViewPrototype.gameObject.SetActive(false);
             mainSystem.HeroViewUI.gameObject.SetActive(false);
+            mainSystem.MonsterView.gameObject.SetActive(false);
 
             mainSystem.MapMesh.Initialize(new int2(mainSystem.Map.width, mainSystem.Map.height), mainSystem.Map);
         }
@@ -175,6 +190,17 @@ namespace bet_slum.Games.MapGame.View
                     : packet.MissionLogic == Packet.Mission.UpgradeBuildingLevel || packet.MissionLogic == Packet.Mission.DowngradeAndRedeployBuildingLevel 
                         ? 8.5f
                         : 2f);
+            }
+
+            foreach (var view in _monsterViews)
+                _monsterViewPool.Release(view);
+            _monsterViews.Clear();
+            foreach (var monster in mainSystem.SimulationSystem.Monsters)
+            {
+                var view = _monsterViewPool.Get();
+                _monsterViews.Add(view);
+
+                view.transform.position = Camera.main.WorldToScreenPoint(mainSystem.SimulationSystem.Plots[monster.PlotIndex].PlotWorldCenter);
             }
 
             foreach (var commander in mainSystem.SimulationSystem.Commanders)

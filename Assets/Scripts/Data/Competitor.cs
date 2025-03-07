@@ -49,7 +49,8 @@ namespace bet_slum.Data
                     if (competitor.id.Equals(competitorID)
                         && team.competitorStats.TryGetValue(competitorID, out var statList))
                     {
-                        return statList.FirstOrDefault(s => s.competitorStatDefinitionID == statDefinitionID)?.value ?? defaultValue;}
+                        return statList.FirstOrDefault(s => s.competitorStatDefinitionID == statDefinitionID)?.value ?? defaultValue;
+                    }
                 }
             }
 

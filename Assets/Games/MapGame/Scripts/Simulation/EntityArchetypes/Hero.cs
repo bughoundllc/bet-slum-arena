@@ -21,5 +21,6 @@ namespace bet_slum.Games.MapGame.Simulation.EntityArchetypes
 
         public float HP;
         public float HPMax = 100f;
+        public float AttackDamage;
     }
 }

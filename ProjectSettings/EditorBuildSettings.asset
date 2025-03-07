@@ -14,6 +14,9 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Games/MapGame/Scenes/MapGame.unity
     guid: 79ae42f8ee336264ea74cc6b2f0f2302
+  - enabled: 1
+    path: Assets/Games/Slapfight/Scenes/Slapfight/Slapfight.unity
+    guid: 9dbe7768136a17643a3856724ac604d2
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

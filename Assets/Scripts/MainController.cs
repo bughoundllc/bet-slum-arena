@@ -10,7 +10,8 @@ namespace bet_slum
         [SerializeField] private enum Game
         {
             CombatArena,
-            MapGame
+            MapGame,
+            Slapfight
         }
         [SerializeField] private Game InitialGame = Game.CombatArena;
         

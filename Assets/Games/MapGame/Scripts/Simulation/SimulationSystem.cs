@@ -40,18 +40,9 @@ namespace bet_slum.Games.MapGame.Simulation
         private Dictionary<string, Hero> _heroes = new();
         public List<Packet> Packets => _packets;
         private List<Packet> _packets = new();
-        //public List<War> Wars => _wars;
-        //private List<War> _wars = new();
+        public List<Monster> Monsters => _monsters;
+        private List<Monster> _monsters = new();
 
-        private bool IsAtWar(string partyA, string partyB)
-        {
-            foreach(var war in _wars)
-            {
-                if (partyA == war.AggressorID && partyB == war.DefenderID) return true;
-                if (partyB == war.AggressorID && partyA == war.DefenderID) return true;
-            }
-            return false;
-        }
 
         // Lookups
         private Dictionary<Plot, Color32> _plotKeyLookup = new();
@@ -60,8 +51,8 @@ namespace bet_slum.Games.MapGame.Simulation
         private Dictionary<Color32, List<int2>> _plotPixelLookup = new();
         public Dictionary<int2, Color32> PixelPlotLookup => _pixelPlotLookup;
         private Dictionary<int2, Color32> _pixelPlotLookup = new();
-        public Dictionary<Color32, HashSet<Color32>> PlotNeighborLookup => _plotNeighborLookup;
-        private Dictionary<Color32, HashSet<Color32>> _plotNeighborLookup = new();
+        public Dictionary<Color32, List<Color32>> PlotNeighborLookup => _plotNeighborLookup;
+        private Dictionary<Color32, List<Color32>> _plotNeighborLookup = new();
         public Dictionary<string, List<Color32>> CommanderPlotLookup => _commanderPlotLookup;
         private Dictionary<string, List<Color32>> _commanderPlotLookup = new();
 
@@ -84,6 +75,9 @@ namespace bet_slum.Games.MapGame.Simulation
             CalculateMapPlotData();
 
             CalculateNeighborLookup();
+
+            // remove neighbors for funsies
+            //RandomlyRemoveEdges(GetEdges().Count / 2);
         }
 
         public void InitializeCompetitors(MapGameMatchRunner mainSystem)
@@ -93,20 +87,24 @@ namespace bet_slum.Games.MapGame.Simulation
             {
                 spawnPlotIndices.Add(plot.Key);
             };
-            var shuffledIndicesQueue = spawnPlotIndices.Shuffle();
+            var shuffledIndices = spawnPlotIndices.Shuffle();
 
             var competitionInfo = mainSystem.CompetitorData;
             for (int i = 0; i < competitionInfo.competitionTeams.Count; i++)
             {
-                var plotIdex = shuffledIndicesQueue.FirstOrDefault(pIdx => _plotNeighborLookup[pIdx].Count(nIdx => _plots[nIdx].CreepControllerID != null) == 0);
+                var plotIdex = shuffledIndices
+                    // first plot that has
+                    .FirstOrDefault(pIdx => 
+                        // 0 neighbors with >0 other heroes
+                        _plotNeighborLookup[pIdx].Count(nIdx => _heroes.Count(h => h.Value.CurrentPlotIdx.Equals(nIdx)) > 0) == 0);
 
                 var competitor = competitionInfo.competitionTeams[i].competitors[0];
                 var commanderKey = competitor.id;
                 
                 var maxStatScalar = 3f;
                 var atkStat = 1f;// competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Attack", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
-                var defStat = 1f; competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Defense", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
-                var stdStat = 1f; competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Stewardship", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
+                var defStat = 1f;// competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Defense", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
+                var stdStat = 1f;// competitionInfo.GetCompetitorStatValue(competitor.id, "STAT_Stewardship", defaultValue: UnityEngine.Random.Range(0.25f, WorldConsts.MaxStat));
                 
                 var commander = new Commander
                 {
@@ -124,16 +122,37 @@ namespace bet_slum.Games.MapGame.Simulation
                 _commanderPlotLookup[commanderKey].Add(plotIdex);
 
                 _plots[plotIdex].Building = new Building { CommanderID = commanderKey, HP = _buildingLevel1HP, MaxHP = _buildingLevel1HP };
-                _plots[plotIdex].CreepAmount = _plots[plotIdex].MaxCreepAmount;
-                _plots[plotIdex].CreepControllerID = commanderKey;
+                //_plots[plotIdex].CreepAmount = _plots[plotIdex].MaxCreepAmount;
+                //_plots[plotIdex].CreepControllerID = commanderKey;
 
                 var hero = new Hero { };
                 hero.HP = hero.HPMax;
                 hero.CurrentPlotIdx = plotIdex;
+                hero.AttackDamage = UnityEngine.Random.Range(0.1f, 10f);
                 _heroes.Add(commanderKey, hero);
             }
 
-            // reset for competitors with neighbors - todo work this into original loop
+            // spawn field entities
+            var monstersToSpawn = shuffledIndices.Count() * 0.1f;
+            for(int i = 0; i < monstersToSpawn; i++)
+            {
+                var spawnPosition = shuffledIndices
+                    .FirstOrDefault(pIdx =>
+                        // No other monsters
+                        _monsters.Count(m => m.PlotIndex.Equals(pIdx)) == 0
+                        // No heroes
+                        && _heroes.Count(h => h.Value.CurrentPlotIdx.Equals(pIdx)) == 0
+                        // No neighbor heroes
+                        && _plotNeighborLookup[pIdx].Count(nIdx => _monsters.Count(m => m.PlotIndex.Equals(nIdx)) > 0) == 0
+                        // No neighbor monsters
+                        && _plotNeighborLookup[pIdx].Count(nIdx => _heroes.Count(h => h.Value.CurrentPlotIdx.Equals(nIdx)) > 0) == 0
+                        );
+                
+                if (spawnPosition.Equals(default(Color32))) break;
+
+                var monster = new Monster { PlotIndex = spawnPosition };
+                _monsters.Add(monster);
+            }
         }
 
         private void CalculateMapPlotData()
@@ -227,6 +246,72 @@ namespace bet_slum.Games.MapGame.Simulation
             }
         }
 
+        private bool IsGraphConnected(Color32 startNode)
+        {
+            var visited = new HashSet<Color32>();
+            var queue = new Queue<Color32>();
+            queue.Enqueue(startNode);
+            visited.Add(startNode);
+
+            while (queue.Count > 0)
+            {
+                var node = queue.Dequeue();
+                foreach (var neighbor in _plotNeighborLookup[node])
+                {
+                    if (!visited.Contains(neighbor))
+                    {
+                        visited.Add(neighbor);
+                        queue.Enqueue(neighbor);
+                    }
+                }
+            }
+
+            return visited.Count == _plotNeighborLookup.Count;
+        }
+
+        private List<(Color32 u, Color32 v)> GetEdges()
+        {
+            var edges = new List<(Color32 u, Color32 v)>();
+
+            foreach (var kvp in _plotNeighborLookup)
+            {
+                var u = kvp.Key;
+                foreach (var v in kvp.Value)
+                {
+                    if (!u.Equals(v)) // Avoid duplicate edges in undirected graph
+                        edges.Add((u, v));
+                }
+            }
+            return edges;
+        }
+
+        private void RandomlyRemoveEdges(int numEdgesToRemove)
+        {
+            var edges = GetEdges();
+
+            var random = new System.Random();
+            edges = edges.OrderBy(_ => random.Next()).ToList();
+
+            foreach (var edge in edges)
+            {
+                if (numEdgesToRemove == 0) break;
+
+                _plotNeighborLookup[edge.u].Remove(edge.v);
+                _plotNeighborLookup[edge.v].Remove(edge.u);
+
+
+                if (!IsGraphConnected(edge.u)) // Check connectivity
+                {
+                    _plotNeighborLookup[edge.u].Add(edge.v);
+                    _plotNeighborLookup[edge.v].Add(edge.u); // Restore edge
+                }
+                else
+                {
+                    numEdgesToRemove--;
+                }
+            }
+        }
+
         private void TravelHeroTo(string commanderKey, Hero hero, Color32 source, Color32 target)
         {
             hero.MovementState = Hero.State.Traveling;
@@ -237,6 +322,12 @@ namespace bet_slum.Games.MapGame.Simulation
 
         }
 
+        // fortnite pass
+            // no creep
+            // spawn in random position
+            // collect nearest weapon
+            // fight nearest
+
         float lastPulseTime = 0f;
         public void OnUpdate(MapGameMatchRunner mainSystem)
         {
@@ -245,7 +336,6 @@ namespace bet_slum.Games.MapGame.Simulation
             // a hero capturing a plot captures the emitter
             // emitters emit control/creep passively
 
-            var atWar = Input.GetKey(KeyCode.Space);
 
             //if (Time.time - lastPulseTime > 0.25f)
             //{
@@ -314,29 +404,110 @@ namespace bet_slum.Games.MapGame.Simulation
                 {
                     hero.Value.LastActionTime = Time.time;
 
-                    // account for packets in transit
-                    var creepSent = new Dictionary<Color32, float>();
-                    foreach (var existingPacket in _packets)
-                    {
-                        if (existingPacket.CommanderID == hero.Key)
-                        {
-                            var target = existingPacket.Path[existingPacket.Path.Count - 1];
+                    //// account for packets in transit
+                    //var creepSent = new Dictionary<Color32, float>();
+                    //foreach (var existingPacket in _packets)
+                    //{
+                    //    if (existingPacket.CommanderID == hero.Key)
+                    //    {
+                    //        var target = existingPacket.Path[existingPacket.Path.Count - 1];
 
-                            if (existingPacket.MissionLogic == Packet.Mission.AddCreep)
-                            {
-                                if (!creepSent.ContainsKey(target))
-                                    creepSent.Add(target, 0f);
-                                creepSent[target] += float.Parse(existingPacket.AuxString);//* commander.Value.ConstructionSupplyMultiplierStat;
-                            }
-                        }
-                    }
+                    //        if (existingPacket.MissionLogic == Packet.Mission.AddCreep)
+                    //        {
+                    //            if (!creepSent.ContainsKey(target))
+                    //                creepSent.Add(target, 0f);
+                    //            creepSent[target] += float.Parse(existingPacket.AuxString);//* commander.Value.ConstructionSupplyMultiplierStat;
+                    //        }
+                    //    }
+                    //}
 
                     var didAction = false;
 
+                    // how to chase an enemy
+                    // case 1) assume they're moving
+                    // set target to an unstationed neighbor of their current position
+                    // EN ROUTE: what if their position changes?
+                    // reset case 1
+                    // EN ROUTE: what if they stop moving?
+                    // reset, change to case 2
+                    // case 2) assume they're stationary
+                    // move to one of the neighboring unstationed plots
+                    // what if all the neighboring plots are filled?
+                    // for now, just cancel. later, maybe neighbor of a neighbor? or we could introduce ranges
+                    // EN ROUTE: what if they start moving?
+                    // reset, change to case 1
+
+
+                    // Try to attack enemies neighboring your current position
+                    //if (!didAction)
+                    //{
+                    //    var targets = _plotNeighborLookup[currentPlotKey].Where(pIdx => _heroes.Count(kv => kv.Key != hero.Key && kv.Value.CurrentPlotIdx.Equals(pIdx)) > 0);
+                    //    if (targets.Count() > 0)
+                    //    {
+                    //        var target = targets.First();
+
+                    //        var packet = new Packet { CommanderID = hero.Key };
+                    //        _packets.Add(packet);
+
+                    //        packet.MissionLogic = Packet.Mission.AttackHero;
+                    //        packet.Path = GetPathAStar(currentPlotKey, target, hero.Key);
+                    //        packet.AuxString = (1f * hero.Value.AttackDamage).ToString();
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // Move to weaker target
+                    //if (!didAction)
+                    //{
+                    //    var stationaryTargetNeighbors = _heroes
+                    //        .Where(h => h.Key != hero.Key) /* not me */
+                    //        .Where(h => h.Value.AttackDamage < hero.Value.AttackDamage) /* weaker than me */
+                    //        .Where(h => h.Value.MovementState != Hero.State.Traveling) /* stationary */
+                    //        .Where(h => _plotNeighborLookup[h.Value.CurrentPlotIdx] /* has unstationed neighbors */
+                    //            .Count(nIdx => _heroes
+                    //                            .Count(h =>  (h.Value.MovementState == Hero.State.Stationed && h.Value.CurrentPlotIdx.Equals(nIdx))
+                    //                                || h.Value.MovementState == Hero.State.Traveling && h.Value.Path[h.Value.Path.Count-1].Equals(nIdx)) == 0) > 0)
+                    //        .SelectMany(h => _plotNeighborLookup[h.Value.CurrentPlotIdx] /* get those neighbors */
+                    //            .Where(nIdx => _heroes
+                    //                            .Count(h => (h.Value.MovementState == Hero.State.Stationed && h.Value.CurrentPlotIdx.Equals(nIdx))
+                    //                                || h.Value.MovementState == Hero.State.Traveling && h.Value.Path[h.Value.Path.Count - 1].Equals(nIdx)) == 0))
+                    //        .OrderBy(pIdx => Vector3.Distance(_plots[pIdx].PlotWorldCenter, _plots[hero.Value.CurrentPlotIdx].PlotWorldCenter)) /* order by distance */
+                    //        ;
+
+                    //    if(stationaryTargetNeighbors.Count() > 0)
+                    //    {
+                    //        var target = stationaryTargetNeighbors.First();
+
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, target);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // RELOCATE - Toward a weak enemy
+                    //if (!didAction)
+                    //{
+                    //    var toHunt = _heroes
+                    //        .Where(h => h.Value.AttackDamage < hero.Value.AttackDamage)
+                    //        .OrderBy(h => Vector3.Distance(_plots[h.Value.CurrentPlotIdx].PlotWorldCenter, currentPlot.PlotWorldCenter))
+                    //        .Select(h => h.Value)
+                    //        .FirstOrDefault();
+
+                    //    if (toHunt != null)
+                    //    {
+                    //        var target = toHunt.CurrentPlotIdx;
+
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, target);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
                     // Stationed Actions
-                    
+
                     // Priority 1
-                        // Increase control in your current position
+                    // Increase control in your current position
                     //if (!didAction)
                     //{
                     //    if (currentPlot.CreepControllerID != hero.Key
@@ -415,23 +586,6 @@ namespace bet_slum.Games.MapGame.Simulation
                     //    }
                     //}
 
-                    // Try to attack enemies neighboring your current position
-                    //if (!didAction)
-                    //{
-                    //    var targets = _plotNeighborLookup[currentPlotKey].Where(pIdx => _heroes.Count(kv => kv.Key != hero.Key && kv.Value.CurrentPlotIdx.Equals(pIdx)) > 0);
-                    //    if (targets.Count() > 0)
-                    //    {
-                    //        var target = targets.First();
-
-                    //        var packet = new Packet { CommanderID = hero.Key };
-                    //        _packets.Add(packet);
-
-                    //        packet.MissionLogic = Packet.Mission.AttackHero;
-                    //        packet.Path = GetPathAStar(currentPlotKey, target, hero.Key);
-
-                    //        didAction = true;
-                    //    }
-                    //}
 
 
                     // Try to send creep to empty neighbor
@@ -510,6 +664,29 @@ namespace bet_slum.Games.MapGame.Simulation
                     //            && _heroes.Count(h => h.Value.MovementState == Hero.State.Traveling && pIdx.Equals(h.Value.Path[h.Value.Path.Count-1])) == 0
                     //            // hero stationed at this location
                     //            && _heroes.Count(h => h.Value.MovementState == Hero.State.Stationed && h.Value.CurrentPlotIdx.Equals(pIdx)) == 0);
+
+                    //    if (potentialTargets.Count() > 0)
+                    //    {
+                    //        var target = potentialTargets.First();
+
+                    //        TravelHeroTo(hero.Key, hero.Value, currentPlotKey, target);
+
+                    //        didAction = true;
+                    //    }
+                    //}
+
+                    // RELOCATE - To a random empty plot
+                    //if (!didAction)
+                    //{
+                    //    var potentialTargets = _plots
+                    //        .Select(kv => kv.Key)
+                    //        .Where(pIdx => !pIdx.Equals(hero.Value.CurrentPlotIdx)
+                    //            // no hero traveling to this location
+                    //            && _heroes.Count(h => h.Value.MovementState == Hero.State.Traveling && pIdx.Equals(h.Value.Path[h.Value.Path.Count - 1])) == 0
+                    //            // hero stationed at this location
+                    //            && _heroes.Count(h => h.Value.MovementState == Hero.State.Stationed && h.Value.CurrentPlotIdx.Equals(pIdx)) == 0
+                    //            )
+                    //        .Shuffle();
 
                     //    if (potentialTargets.Count() > 0)
                     //    {
@@ -682,7 +859,7 @@ namespace bet_slum.Games.MapGame.Simulation
                         if(_heroes.Count(h => h.Key != packet.CommanderID && h.Value.CurrentPlotIdx.Equals(currentPlotIndex)) > 0)
                         {
                             var heroToAttack = _heroes.FirstOrDefault(h => h.Key != packet.CommanderID && h.Value.CurrentPlotIdx.Equals(currentPlotIndex));
-                            heroToAttack.Value.HP = math.clamp(heroToAttack.Value.HP - 10f, 0f, heroToAttack.Value.HPMax);
+                            heroToAttack.Value.HP = math.clamp(heroToAttack.Value.HP - float.Parse(packet.AuxString), 0f, heroToAttack.Value.HPMax);
                             if(heroToAttack.Value.HP <= 0)
                             {
                                 // DIE

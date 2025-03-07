@@ -37,6 +37,7 @@ namespace bet_slum.Games.MapGame
         public GameObject BuildingViewPrototype;
         public LineRenderer RoadPrototype;
         public GameObject HeroViewUI;
+        public GameObject MonsterView;
 
         public override int MaxCompetitorCount => 32;
 

@@ -15,7 +15,7 @@ namespace bet_slum
         public GameCompetitionInfo CompetitorData { get { return _competitorData; } }
         protected GameCompetitionInfo _competitorData;
         protected virtual int WinnerID => -1;
-        public virtual int MaxCompetitorCount => 2;
+        public virtual int MaxCompetitorCount => -1;
 
         public virtual async Awaitable InitializeGameEnvironment(ShowRunner runner)
         {
