@@ -8,8 +8,10 @@ namespace bet_slum.showRunner
     {
         public override async Awaitable<GameCompetitionInfo> GetCompetitors()
         {
+            var competitorCount = _matchRunner.MaxCompetitorCount; // could be randomized each call
+            Debug.Log($"Getting {competitorCount} competitors");
             var competitors = new List<GameCompetitionTeamData>();
-            for(int i = 0; i < _matchRunner.MaxCompetitorCount; i++)
+            for(int i = 0; i < competitorCount; i++)
             {
                 competitors.Add(new GameCompetitionTeamData
                 {

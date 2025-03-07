@@ -53,10 +53,12 @@ namespace bet_slum.Games.Slapfight
 
         public async override Awaitable InitializeMatchEnvironment()
         {
-            base.InitializeMatchEnvironment();
+            await base.InitializeMatchEnvironment();
 
             // TODO - we call this at the end of each InitializeMatchEnvironment - do this better
             await InitializeMatchCompetitors();
+
+            await _runner.StartBettingPeriod();
         }
 
         public async override Awaitable InitializeMatchCompetitors()
@@ -104,7 +106,7 @@ namespace bet_slum.Games.Slapfight
                     abilities.Add(abilityDefinition);
                 }
 
-                _fighter.Initialize(i, this, fighterData, animator, abilities);
+                _fighter.Initialize(i, this, fighterData, animator, abilities, _spawnPoints[i]);
                 _fighters.Add(_fighter);
             }
 
@@ -196,27 +198,27 @@ namespace bet_slum.Games.Slapfight
             
             Debug.Log($"Current fighter index: {_fighterTurnIndex}");
 
-            await _fighters[_fighterTurnIndex].BeginTurn();
+            await _fighters[_fighterTurnIndex].RunTurn();
         }
 
         public async Awaitable EndTurn()
         {
-            _fighters[_fighterTurnIndex].SoloCamera.gameObject.SetActive(false);
+            //_fighters[_fighterTurnIndex].SoloCamera.gameObject.SetActive(false);
             
             var target = _fighters[_fighters[_fighterTurnIndex].CurrentTargetIndex];
-            target.SoloCamera.gameObject.SetActive(true);
-            await Task.Delay(500/*current transition speed is 0.65*/);
+            //target.SoloCamera.gameObject.SetActive(true);
+            //await Task.Delay(500/*current transition speed is 0.65*/);
 
-            var source = _fighters[_fighterTurnIndex];
-            var sourceAttack = source.Abilities[source.CurrentAbilityIndex];
-            target.TakeDamage(sourceAttack.Damage);
-            if(target.IsDead)
-                target.Animator.SetTrigger("Killed");
-            else
-                target.Animator.SetTrigger("Damaged");
+            //var source = _fighters[_fighterTurnIndex];
+            //var sourceAttack = source.Abilities[source.CurrentAbilityIndex];
+            //target.TakeDamage(sourceAttack.Damage);
+            //if(target.IsDead)
+            //    target.Animator.SetTrigger("Killed");
+            //else
+            //    target.Animator.SetTrigger("Damaged");
 
             // TODO - wait on their sequence to end, might haev a diff animation
-            await Task.Delay(4000);
+            //await Task.Delay(4000);
             target.SoloCamera.gameObject.SetActive(false);
 
             _turnRunning = false;

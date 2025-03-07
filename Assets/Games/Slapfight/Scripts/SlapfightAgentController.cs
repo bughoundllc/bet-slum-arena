@@ -34,15 +34,22 @@ namespace bet_slum.Games.Slapfight
         private List<FighterAbility> _abilities = new();
         public int CurrentAbilityIndex = -1;
         public int CurrentTargetIndex = -1;
-        private Vector3 _spawnPosition;
+        private Transform _spawnPosition;
         private NavMeshAgent _agent;
         private int _fighterIndex;
+        public Transform AttackerPosition;
 
-        public void Initialize(int fighterIndex, SlapfightMatchRunner matchRunner, Competitor competitorData, RuntimeAnimatorController animatorController, List<FighterAbility> abilities)
+        public void Initialize(
+            int fighterIndex, 
+            SlapfightMatchRunner matchRunner, 
+            Competitor competitorData, 
+            RuntimeAnimatorController animatorController, 
+            List<FighterAbility> abilities,
+            Transform spawnPoint)
         {
             _fighterIndex = fighterIndex;
             _agent = GetComponent<NavMeshAgent>();
-            _spawnPosition = transform.position;
+            _spawnPosition = spawnPoint;
             _nameLabel.SetText($"{competitorData.name}");
             _matchRunner = matchRunner;
             _competitorData = competitorData;
@@ -65,12 +72,12 @@ namespace bet_slum.Games.Slapfight
             
             // anim event broadcasting
             _animEventBroadcaster = Animator.transform.gameObject.AddComponent<SlapfightAgentAnimationEventBroadcaster>();
-            _animEventBroadcaster.OnAttackEndEvent.AddListener(OnTurnEnd);
+            _animEventBroadcaster.OnAttackEndEvent.AddListener(OnAttackEnd);
 
             HP = MaxHP;
         }
 
-        public async Awaitable BeginTurn()
+        public async Awaitable RunTurn()
         {
             // just play animation
             Debug.Log($"Agent Beginning turn");
@@ -93,32 +100,75 @@ namespace bet_slum.Games.Slapfight
             // lock in target/ability
             CurrentTargetIndex = validTargetIndices[UnityEngine.Random.Range(0, validTargetIndices.Count)];
             CurrentAbilityIndex = UnityEngine.Random.Range(0, _abilities.Count);
+            var target = _matchRunner.Fighters[CurrentTargetIndex];
+            var ability = _abilities[CurrentAbilityIndex];
 
-            var targetPosition = _matchRunner.Fighters[CurrentTargetIndex].transform.position;
+            // go to target attack pt
+            var targetPosition = target.AttackerPosition.position;
             var dirTo = targetPosition - transform.position;
             transform.rotation = Quaternion.LookRotation(dirTo.normalized, Vector3.up);
-            var stoppingDistance = (dirTo).normalized * 2.5f;
-            if (Vector3.Distance(targetPosition, transform.position) > stoppingDistance.magnitude)
+            var stoppingDistance = 0.25f;
+            // ignore y
+            while (Vector3.Distance(new Vector3(targetPosition.x, transform.position.y, targetPosition.z), transform.position) > stoppingDistance)
             {
-                _agent.SetDestination(targetPosition - stoppingDistance);
-                await Task.Delay(6000);
+                _agent.SetDestination(targetPosition);
+                await Task.Delay(1);
             }
+            _agent.isStopped = true;
             
             Animator.SetInteger("AbilityIndex", CurrentAbilityIndex);
-            _matchRunner._popup.Show($"{_abilities[CurrentAbilityIndex].Name}");
+            _matchRunner._popup.Show($"{ability.Name}");
             
-            await Task.Delay(1000);
+            //await Task.Delay(1000);
             
             Animator.SetTrigger("UseAbility");
+            _attacking = true;
+            while (_attacking)
+            {
+                await Task.Delay(1);
+            }
+
+            // Switch to reaction camera
+            SoloCamera.gameObject.SetActive(false);
+            target.SoloCamera.gameObject.SetActive(true);
+
+            // probably shouldnt be handling this here uwu
+            target.TakeDamage(ability.Damage);
+            if (target.IsDead)
+                target.Animator.SetTrigger("Killed");
+            else
+                target.Animator.SetTrigger("Damaged");
+
+
+            // Return to spawn
+            _agent.isStopped = false;
+            targetPosition = _spawnPosition.position;
+            dirTo = targetPosition - transform.position;
+            transform.rotation = Quaternion.LookRotation(dirTo.normalized, Vector3.up);
+            // ignore y
+            while (Vector3.Distance(new Vector3(targetPosition.x, transform.position.y, targetPosition.z), transform.position) > stoppingDistance)
+            {
+                Debug.Log(Vector3.Distance(targetPosition, transform.position));
+                _agent.SetDestination(targetPosition);
+                await Task.Delay(1);
+            }
+            Debug.Log("Player returned to spawn");
+            // TODO - animate turn toward center
+            transform.rotation = Quaternion.LookRotation((new Vector3(0, _spawnPosition.position.y, 0) - _spawnPosition.position).normalized, Vector3.up);
+            
+            await _matchRunner.EndTurn();
         }
 
-        public void OnTurnEnd()
+        private bool _attacking = false;
+
+        public void OnAttackEnd()
         {
             Debug.Log($"Agent Ending turn");
+            _attacking = false;
             //_camera.gameObject.SetActive(false);
 
             // we're fine with the fire & forget re: await here
-            _matchRunner.EndTurn();
+            //_matchRunner.EndTurn();
         }
 
         public void TakeDamage(float damage)

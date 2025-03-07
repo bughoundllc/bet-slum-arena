@@ -163,7 +163,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 2dc2051eb6428ba40bd9194d1df620a8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  GoLive: 1
+  GoLive: 0
   InitialGame: 2
 --- !u!1 &1559072161
 GameObject:

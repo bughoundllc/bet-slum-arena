@@ -7,11 +7,14 @@ namespace bet_slum
     {
         // Run Configuration
         [SerializeField] private bool GoLive = false;
+
+        // TODO - generate/parse from games in folder?
         [SerializeField] private enum Game
         {
             CombatArena,
             MapGame,
-            Slapfight
+            Slapfight,
+            Kake
         }
         [SerializeField] private Game InitialGame = Game.CombatArena;
         

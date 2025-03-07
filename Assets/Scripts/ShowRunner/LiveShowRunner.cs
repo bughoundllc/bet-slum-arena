@@ -46,7 +46,7 @@ namespace bet_slum.showRunner
                 throw new Exception("No auth token received from login");
         }
 
-        protected async override Awaitable StartBettingPeriod()
+        public async override Awaitable StartBettingPeriod()
         {
             await NetworkController.GET("game", "open-bets");
             await base.StartBettingPeriod();

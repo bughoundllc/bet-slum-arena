@@ -58,7 +58,7 @@ namespace bet_slum
 
             await InitializeGame();
             await InitializeMatch();
-            await StartBettingPeriod();
+            //await StartBettingPeriod();
         }
 
         protected async Awaitable LoadGame(string name)
@@ -80,7 +80,7 @@ namespace bet_slum
             await _matchRunner.InitializeMatchEnvironment();
         }
 
-        protected virtual async Awaitable StartBettingPeriod()
+        public virtual async Awaitable StartBettingPeriod()
         {
             Debug.Log("SR: Starting Betting Period");
 
@@ -115,9 +115,9 @@ namespace bet_slum
 
         public virtual async Awaitable OnMatchEnd(int winnerID)
         {
-            await _matchRunner.InitializeMatchCompetitors();
-            await Task.Delay((int)(_postRoundStartBettingDelay * 1000));
-            await StartBettingPeriod();
+            await _matchRunner.InitializeMatchEnvironment();
+            //await Task.Delay((int)(_postRoundStartBettingDelay * 1000));
+            //await StartBettingPeriod();
         }
     }
 
