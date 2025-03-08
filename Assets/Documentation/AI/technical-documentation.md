@@ -375,3 +375,65 @@ The project appears to use:
 The project has several integration points with external systems:
 - Network API for live game data
 - Shared library ("bet-slum-shared lib") mentioned in comments 
+
+## Audio System
+
+### AudioManager
+
+```csharp
+public class AudioManager : MonoBehaviour
+{
+    // Singleton instance
+    public static AudioManager Instance { get; }
+    
+    // Volume controls
+    [SerializeField] private float _masterVolume;
+    [SerializeField] private float _musicVolume;
+    [SerializeField] private float _sfxVolume;
+    
+    // Core methods
+    public AudioSource PlaySFX(AudioClip clip, float volume = 1f, float pitch = 1f, bool loop = false);
+    public AudioSource PlaySFXAtPosition(AudioClip clip, Vector3 position, float volume = 1f, float pitch = 1f, float spatialBlend = 1f);
+    public void PlayMusic(AudioClip clip, float fadeTime = 1f, float volume = 1f, bool loop = true);
+    public void StopAllSFX();
+    public void StopMusic(float fadeTime = 1f);
+    
+    // Volume controls
+    public void SetMasterVolume(float volume);
+    public void SetMusicVolume(float volume);
+    public void SetSFXVolume(float volume);
+}
+```
+
+A singleton manager class that handles all audio playback in the application. Features include:
+- Audio source pooling for efficiency
+- Separate handling of music and sound effects
+- Crossfading between music tracks
+- Volume control at multiple levels
+- 3D spatial audio support
+
+### AudioUtility
+
+```csharp
+public static class AudioUtility
+{
+    private static Dictionary<string, AudioClip> _clipCache;
+    
+    // Core methods
+    public static AudioClip GetClip(string path);
+    public static AudioSource PlaySFX(string path, float volume = 1f, float pitch = 1f);
+    public static AudioSource PlaySFXAtPosition(string path, Vector3 position, float volume = 1f, float pitch = 1f);
+    public static void PlayMusic(string path, float fadeTime = 1f, float volume = 1f);
+    public static void ClearCache();
+    
+    // Utility methods
+    public static float LinearToDecibel(float value);
+    public static float DecibelToLinear(float dB);
+}
+```
+
+A static utility class that provides helper methods for common audio operations:
+- Loading and caching AudioClips from Resources
+- Playing sounds directly from Resources paths
+- Converting between linear and decibel volume scales
+- Memory management through cache clearing 
