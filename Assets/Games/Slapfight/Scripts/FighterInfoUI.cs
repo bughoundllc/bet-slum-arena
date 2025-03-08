@@ -1,3 +1,4 @@
+using bet_slum.Games.Slapfight;
 using bet_slum.Slapfight;
 using TMPro;
 using Unity.Mathematics;
@@ -14,9 +15,14 @@ public class FighterInfoUI : MonoBehaviour
     public TMP_Text Stat1Label;
     public TMP_Text Stat2Label;
     public TMP_Text Stat3Label;
+    public TMP_Text HPText;
+    [HideInInspector] public SlapfightAgentController fighterAgent;
 
     private void Update()
     {
         HPBackgroundSlider.value = math.clamp(HPBackgroundSlider.value - bgSliderSpeed * Time.deltaTime, HPSlider.value, 1f);
+        
+        if(fighterAgent != null)
+            HPText.SetText(fighterAgent.HP.ToString());
     }
 }

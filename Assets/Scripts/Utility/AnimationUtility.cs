@@ -119,6 +119,12 @@ public static class AnimationUtility
             if (!originalClip.legacy)
             {
                 Debug.LogWarning("Converting non-legacy clip to legacy for runtime cloning. Some data may be lost.");
+                Debug.LogWarning("CONVERT NON-LEGACY CLIPS TO HUMANOID ON THE FBX BEFORE COPYING");
+                
+                return newClip;
+                // below doesnt work
+
+
                 // For non-legacy clips, we need a bit more setup
             }
             

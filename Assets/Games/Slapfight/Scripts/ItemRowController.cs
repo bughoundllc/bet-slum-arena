@@ -14,7 +14,7 @@ namespace bet_slum.Slapfight
         // TODO - move
         private Dictionary<string, string> IconFilePathRegistry = new Dictionary<string, string> 
         {
-            {"TestIcon", "Icons/Items/TestIcon" }
+            {"Toad", "Icons/Items/Toad" }
         };
 
         private void Start()

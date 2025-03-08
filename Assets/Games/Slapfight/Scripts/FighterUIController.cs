@@ -35,6 +35,7 @@ public class FighterUIController : MonoBehaviour
             var item = _prefabPool.Get();
             _items.Add(fighter, item);
             var fighterUI = item.GetComponent<FighterInfoUI>();
+            fighterUI.fighterAgent = fighter;
             fighterUI.NameLabel.SetText(fighter.Competitor.competitor.name);
             fighterUI.HPSlider.value = 1f;
             fighterUI.HPBackgroundSlider.value = 1f;

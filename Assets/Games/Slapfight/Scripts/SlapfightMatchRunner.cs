@@ -13,6 +13,9 @@ namespace bet_slum.Games.Slapfight
         [SerializeField] private float _fighterSpacing = 0.5f; // Buffer space between fighters
         [SerializeField] private float _minimumCircleRadius = 5.0f; // Minimum radius regardless of calculation
 
+        // TODO - store this somewhere
+        public static float BASIC_ATTACK_DAMAGE = 10f;
+
         [SerializeField] private SlapfightAgentController _agentPrefab;
         private ObjectPool<SlapfightAgentController> _agentPool;
 
@@ -107,7 +110,7 @@ namespace bet_slum.Games.Slapfight
                 
                 var animator = new AnimatorOverrideController();
                 animator.runtimeAnimatorController = FighterAnimatorController;
-                teamData.competitorData[fighterData.id].availableAbilities.Add(new Data.CompetitorAbilityDefinition { damage = 50f, animationName = "Default", name = "Attack" });
+                teamData.competitorData[fighterData.id].availableAbilities.Add(new Data.CompetitorAbilityDefinition { damage = BASIC_ATTACK_DAMAGE, animationName = "Default", name = "Attack" });
                 for (int k = 0; k < teamData.competitorData[fighterData.id].availableAbilities.Count && k <= MaxAbilities; k++)
                 {
                     var ability = teamData.competitorData[fighterData.id].availableAbilities[k];
@@ -286,9 +289,7 @@ namespace bet_slum.Games.Slapfight
             
             // Use the larger of the calculated radius or minimum radius
             float finalRadius = Mathf.Max(calculatedRadius, minimumRadius);
-            
-            Debug.Log($"Dynamic spawn circle: {count} fighters, width={entityWidth}, spacing={bufferSpace}, calculated radius={calculatedRadius:F2}, final radius={finalRadius:F2}");
-            
+                        
             // Generate positions using the calculated radius
             return GenerateSpawnPositionsInCircle(centerPoint, finalRadius, count);
         }

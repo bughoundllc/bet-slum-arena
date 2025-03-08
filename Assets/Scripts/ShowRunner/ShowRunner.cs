@@ -15,7 +15,6 @@ namespace bet_slum
         // Need a better way of handling sequencing between rounds - we'll want this to be variable eventually, driven by some sequence to allow for live, variable duration, etc
         [SerializeField] private float _bettingPeriodDuration = 10f;
         [SerializeField] private float _postBettingStartDelaySeconds = 3f;
-        [SerializeField] private float _postRoundStartBettingDelay = 3f;
 
         public bool BettingIsEnabled => _bettingEnabled;
         private bool _bettingEnabled = false;

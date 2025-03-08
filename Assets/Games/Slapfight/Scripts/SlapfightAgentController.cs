@@ -27,7 +27,8 @@ namespace bet_slum.Games.Slapfight
 
         public bool IsDead => HP <= 0f;
         public float HP;
-        public float MaxHP = 100f;
+        public float MaxHP;
+        private float _hpPerLevel = 100f;
 
         public int CurrentAbilityIndex = -1;
         public int CurrentTargetIndex = -1;
@@ -50,6 +51,7 @@ namespace bet_slum.Games.Slapfight
             _nameLabel.SetText($"{competitorData.competitor.name}");
             _matchRunner = matchRunner;
             _competitorData = competitorData;
+            MaxHP = competitorData.stats.Sum(s => s.value) * _hpPerLevel;
 
             // spawn avatar - simpler to spawn different for now, until all possible options are cached 
             Debug.Log("Initializing agent");
