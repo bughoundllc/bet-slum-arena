@@ -56,6 +56,12 @@ namespace bet_slum.Data
         }
     }
 
+    public class ItemDefinition
+    {
+        public string id;
+        public string name;
+        public string icon;
+    }
     public class GameCompetitionTeamData
     {
         public List<Competitor> competitors;
@@ -76,6 +82,23 @@ namespace bet_slum.Data
         public float damage;
     }
 
+
+    /// <summary>
+    /// Data transfer object that combines CompetitorItem and its associated ItemDefinition
+    /// </summary>
+    public class InventoryItemDTO
+    {
+        /// <summary>
+        /// The competitor item with relationship data
+        /// </summary>
+        public CompetitorItem item;
+
+        /// <summary>
+        /// The full item definition data
+        /// </summary>
+        public ItemDefinition definition;
+    }
+
     /// <summary>
     /// Class to hold competitor data including inventory, stats, and available abilities
     /// </summary>
@@ -89,7 +112,7 @@ namespace bet_slum.Data
         /// <summary>
         /// The competitor's inventory items
         /// </summary>
-        public List<CompetitorItem> inventory;
+        public List<InventoryItemDTO> inventory;
 
         /// <summary>
         /// The competitor's stats
@@ -99,7 +122,7 @@ namespace bet_slum.Data
         /// <summary>
         /// Abilities the competitor can use based on their inventory and stats
         /// </summary>
-        public List<CompetitorAbilityDefinition> AvailableAbilities { get; set; } = new List<CompetitorAbilityDefinition>();
+        public List<CompetitorAbilityDefinition> availableAbilities;
     }
 }
 

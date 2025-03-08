@@ -35,6 +35,7 @@ namespace bet_slum.Games.Slapfight
         private NavMeshAgent _agent;
         private int _fighterIndex;
         public Transform AttackerPosition;
+        private bool _initialized = false;
 
         public void Initialize(
             int fighterIndex, 
@@ -70,6 +71,7 @@ namespace bet_slum.Games.Slapfight
             _animEventBroadcaster.OnAttackEndEvent.AddListener(OnAttackEnd);
 
             HP = MaxHP;
+            _initialized = true;
         }
 
         public async Awaitable RunTurn()
@@ -97,12 +99,12 @@ namespace bet_slum.Games.Slapfight
             
             CurrentAbilityIndex =
             // get most damaging
-                _competitorData.AvailableAbilities.IndexOf(_competitorData.AvailableAbilities.OrderByDescending(a => a.damage).First());
+                _competitorData.availableAbilities.IndexOf(_competitorData.availableAbilities.OrderByDescending(a => a.damage).First());
             // get random
                 // UnityEngine.Random.Range(0, _competitorData.AvailableAbilities.Count);
             
             var target = _matchRunner.Fighters[CurrentTargetIndex];
-            var ability = _competitorData.AvailableAbilities[CurrentAbilityIndex];
+            var ability = _competitorData.availableAbilities[CurrentAbilityIndex];
 
             // go to target attack pt
             var targetPosition = target.AttackerPosition.position;
@@ -177,6 +179,8 @@ namespace bet_slum.Games.Slapfight
 
         private void Update()
         {
+            if (!_initialized) return;
+
             var totalSpeed = _agent.velocity.magnitude / _agent.speed;
             Animator.SetFloat("MoveSpeed", totalSpeed);
         }

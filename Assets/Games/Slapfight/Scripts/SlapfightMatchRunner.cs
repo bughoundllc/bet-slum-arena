@@ -93,11 +93,10 @@ namespace bet_slum.Games.Slapfight
                 _fighter.transform.rotation = Quaternion.LookRotation((new Vector3(0, _spawnPoints[i].position.y, 0) - _spawnPoints[i].position).normalized, Vector3.up);
                 var animator = new AnimatorOverrideController();
                 animator.runtimeAnimatorController = FighterAnimatorController;
-
-                teamData.competitorData[fighterData.id].AvailableAbilities.Add(new Data.CompetitorAbilityDefinition { damage = 50f, animationName = "Default", name = "Attack" });
-                for (int k = 0; k < teamData.competitorData[fighterData.id].AvailableAbilities.Count && k <= MaxAbilities; k++)
+                teamData.competitorData[fighterData.id].availableAbilities.Add(new Data.CompetitorAbilityDefinition { damage = 50f, animationName = "Default", name = "Attack" });
+                for (int k = 0; k < teamData.competitorData[fighterData.id].availableAbilities.Count && k <= MaxAbilities; k++)
                 {
-                    var ability = teamData.competitorData[fighterData.id].AvailableAbilities[k];
+                    var ability = teamData.competitorData[fighterData.id].availableAbilities[k];
                     if (_animationRegistry.TryGetValue(ability.animationName, out var animation))
                         animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(animation.AnimationClip, $"Ability{k}");
                     else
