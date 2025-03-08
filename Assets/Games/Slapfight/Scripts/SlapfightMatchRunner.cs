@@ -9,14 +9,14 @@ namespace bet_slum.Games.Slapfight
     public class SlapfightMatchRunner : MatchRunner
     {
         [SerializeField] private List<Transform> _spawnPoints;
- 
+
         [SerializeField] private SlapfightAgentController _agentPrefab;
         private ObjectPool<SlapfightAgentController> _agentPool;
 
         private Dictionary<string, CombatAnimation> _animationRegistry = new();
         [SerializeField] private List<CombatAnimation> _animationList;
         [System.Serializable]
-        public class CombatAnimation 
+        public class CombatAnimation
         {
             public string ID;
             public AnimationClip AnimationClip;
@@ -38,7 +38,7 @@ namespace bet_slum.Games.Slapfight
 
         public async override Awaitable InitializeGameEnvironment(ShowRunner runner)
         {
-            foreach(var clip in _animationList)
+            foreach (var clip in _animationList)
             {
                 _animationRegistry.Add(clip.ID, clip);
             }
@@ -46,9 +46,9 @@ namespace bet_slum.Games.Slapfight
             await base.InitializeGameEnvironment(runner);
 
             _agentPool = new(
-                () => GameObject.Instantiate(_agentPrefab), 
-                prefab => prefab.gameObject.SetActive(true), 
-                prefab => prefab.gameObject.SetActive(false), 
+                () => GameObject.Instantiate(_agentPrefab),
+                prefab => prefab.gameObject.SetActive(true),
+                prefab => prefab.gameObject.SetActive(false),
                 prefab => GameObject.Destroy(prefab.gameObject));
         }
 
@@ -64,26 +64,26 @@ namespace bet_slum.Games.Slapfight
 
         public async override Awaitable InitializeMatchCompetitors()
         {
-            foreach(var fighter in _fighters)
+            foreach (var fighter in _fighters)
             {
                 _agentPool.Release(fighter);
             }
             _fighters.Clear();
 
             await base.InitializeMatchCompetitors();
-            if(_competitorData.competitionTeams.Count < MaxCompetitorCount)
+            if (_competitorData.competitionTeams.Count < MaxCompetitorCount)
             {
                 Debug.LogError($"NOT ENOUGH COMPETITORS PROVIDED");
                 return;
             }
 
-            if(_spawnPoints.Count < _competitorData.competitionTeams.Count)
+            if (_spawnPoints.Count < _competitorData.competitionTeams.Count)
             {
                 Debug.LogError($"Not enough spawn points for provided {_competitorData.competitionTeams.Count} competitors");
                 return;
             }
 
-            for(int i = 0; i < _competitorData.competitionTeams.Count; i++)
+            for (int i = 0; i < _competitorData.competitionTeams.Count; i++)
             {
                 var teamData = _competitorData.competitionTeams[i];
                 var fighterData = teamData.competitors[0];
@@ -98,8 +98,8 @@ namespace bet_slum.Games.Slapfight
                 for (int k = 0; k < teamData.competitorData[fighterData.id].AvailableAbilities.Count && k <= MaxAbilities; k++)
                 {
                     var ability = teamData.competitorData[fighterData.id].AvailableAbilities[k];
-                    if (_animationRegistry.TryGetValue(ability.animationName, out var animation)) 
-                        animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(animation.AnimationClip, $"Ability{k}"); 
+                    if (_animationRegistry.TryGetValue(ability.animationName, out var animation))
+                        animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(animation.AnimationClip, $"Ability{k}");
                     else
                         animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(_animationRegistry["Default"].AnimationClip, $"Ability{k}");
                 }
@@ -142,6 +142,13 @@ namespace bet_slum.Games.Slapfight
             await base.EndMatch();
         }
 
+        protected override int WinnerID {
+            get
+            {
+                var winner = _fighters.FirstOrDefault(f => !f.IsDead);
+                return winner == null ? -1 : _fighters.IndexOf(winner);
+            }
+        }
 
         private async Awaitable Update()
         {
