@@ -3021,31 +3021,15 @@ MonoBehaviour:
   - {fileID: 1081972440}
   - {fileID: 444733439}
   _agentPrefab: {fileID: 8097885541823743468, guid: 85841e50e753a6d409cbd494837847aa, type: 3}
+  _animationList:
+  - ID: Default
+    AnimationClip: {fileID: 7400000, guid: efacc90d50c597e4ba567a20b716d6aa, type: 2}
+  - ID: TestAbilityAnimation
+    AnimationClip: {fileID: 7400000, guid: 814ebc1e613ecc74c83ad0911761aa23, type: 2}
   _popup: {fileID: 807916654}
-  FighterAnimatorController: {fileID: 9100000, guid: 5cc40afdfcf98ac468e9f6d3702de918, type: 2}
-  FighterAAnimation: {fileID: 7400000, guid: efacc90d50c597e4ba567a20b716d6aa, type: 2}
-  FighterBAnimation: {fileID: 7400000, guid: efacc90d50c597e4ba567a20b716d6aa, type: 2}
+  FighterAnimatorController: {fileID: 9100000, guid: 4408178bd842c3d4fad983ad410ccfa8, type: 2}
   FighterModels:
-  - {fileID: 8773028595528094066, guid: bf556777cd6d49241913ef2679198ef6, type: 3}
-  - {fileID: 7157774051417058710, guid: d5bcaf96fdeaa7b4c80edd3de383542d, type: 3}
   - {fileID: 3620499613393879927, guid: 03a371eaa7f2f104e9b7483eaaf05091, type: 3}
-  - {fileID: 1123604886591746714, guid: 100d03d1f8eebc940994858e8ab13089, type: 3}
-  FighterAbilityDefinitions:
-  - Animation: {fileID: 7400000, guid: efacc90d50c597e4ba567a20b716d6aa, type: 2}
-    Name: This Kiss
-    Damage: 20
-  - Animation: {fileID: 7400000, guid: 6fc124147b671634caea0c49a4106f21, type: 2}
-    Name: Getting Air Out Of Ass
-    Damage: 35
-  - Animation: {fileID: 7400000, guid: 814ebc1e613ecc74c83ad0911761aa23, type: 2}
-    Name: Judo Stab
-    Damage: 35
-  - Animation: {fileID: 7400000, guid: e5e18fb9cca1f7143bc9bfaebe5b1210, type: 2}
-    Name: Physically Painful Threat
-    Damage: 10
-  - Animation: {fileID: 7400000, guid: e5e18fb9cca1f7143bc9bfaebe5b1210, type: 2}
-    Name: Completely Flaccid Threat
-    Damage: 1
   FighterUIController: {fileID: 1892347446}
 --- !u!4 &1418755463
 Transform:

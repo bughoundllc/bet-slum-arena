@@ -107,8 +107,8 @@ namespace bet_slum
             return new() {
                 competitionTeams = new()
                 {
-                    new GameCompetitionTeamData{ competitors = new(){ new Competitor { id = Guid.NewGuid().ToString(), name = "Mock Competitor A"} }, competitorStats = new() },
-                    new GameCompetitionTeamData{ competitors = new(){ new Competitor { id = Guid.NewGuid().ToString(), name = "Mock Competitor B"} }, competitorStats = new() }
+                    new GameCompetitionTeamData{ competitors = new(){ new Competitor { id = Guid.NewGuid().ToString(), name = "Mock Competitor A"} }, competitorData = new() },
+                    new GameCompetitionTeamData{ competitors = new(){ new Competitor { id = Guid.NewGuid().ToString(), name = "Mock Competitor B"} }, competitorData = new() }
                 }
             };
         }

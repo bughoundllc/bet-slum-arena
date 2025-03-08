@@ -22,8 +22,8 @@ namespace NET_SLUM.Editor
 
         private void OnEnable()
         {
-            // Initialize the ability animations array
-            abilityAnimations = new AnimationClip[0];
+            // Initialize the ability animations array to match the ability count
+            abilityAnimations = new AnimationClip[abilityCount];
         }
 
         private void OnGUI()
@@ -58,12 +58,8 @@ namespace NET_SLUM.Editor
             idleAnimation = (AnimationClip)EditorGUILayout.ObjectField(
                 "Idle Animation", idleAnimation, typeof(AnimationClip), false);
             
-            // Display fields for each ability animation
-            for (int i = 0; i < abilityCount; i++)
-            {
-                abilityAnimations[i] = (AnimationClip)EditorGUILayout.ObjectField(
-                    $"Ability {i} Animation", abilityAnimations[i], typeof(AnimationClip), false);
-            }
+            EditorGUILayout.Space(5);
+            EditorGUILayout.HelpBox("Placeholder animation clips will be generated for each ability state. These can be replaced at runtime.", MessageType.Info);
             
             EditorGUILayout.Space(20);
             
@@ -82,6 +78,13 @@ namespace NET_SLUM.Editor
                 Directory.CreateDirectory(savePath);
             }
             
+            // Create subdirectory for animation clips
+            string animationsSubPath = Path.Combine(savePath, $"{animatorName}_Animations");
+            if (!Directory.Exists(animationsSubPath))
+            {
+                Directory.CreateDirectory(animationsSubPath);
+            }
+            
             // Create the animator controller asset
             string fullPath = Path.Combine(savePath, $"{animatorName}.controller");
             AnimatorController animatorController = AnimatorController.CreateAnimatorControllerAtPath(fullPath);
@@ -94,6 +97,12 @@ namespace NET_SLUM.Editor
             if (idleAnimation != null)
             {
                 idleState.motion = idleAnimation;
+            }
+            else
+            {
+                // Create a placeholder idle animation if none provided
+                AnimationClip idleClip = CreatePlaceholderAnimation("Idle", animationsSubPath);
+                idleState.motion = idleClip;
             }
             
             // Set Idle as the default state
@@ -109,11 +118,9 @@ namespace NET_SLUM.Editor
                 // Create the ability state
                 AnimatorState abilityState = rootStateMachine.AddState($"Ability{i}");
                 
-                // Assign animation if provided
-                if (i < abilityAnimations.Length && abilityAnimations[i] != null)
-                {
-                    abilityState.motion = abilityAnimations[i];
-                }
+                // Create a placeholder animation for this ability
+                AnimationClip abilityClip = CreatePlaceholderAnimation($"Ability{i}", animationsSubPath);
+                abilityState.motion = abilityClip;
                 
                 // Create transition from Any State to this ability state
                 AnimatorStateTransition anyStateTransition = rootStateMachine.AddAnyStateTransition(abilityState);
@@ -140,7 +147,28 @@ namespace NET_SLUM.Editor
             Selection.activeObject = animatorController;
             EditorGUIUtility.PingObject(animatorController);
             
-            Debug.Log($"Animator Controller created at {fullPath}");
+            Debug.Log($"Animator Controller created at {fullPath} with animation clips in {animationsSubPath}");
+        }
+        
+        // Helper method to create a placeholder animation clip
+        private AnimationClip CreatePlaceholderAnimation(string clipName, string savePath)
+        {
+            // Create a new animation clip
+            AnimationClip clip = new AnimationClip();
+            clip.name = clipName;
+            
+            // Add a simple property curve (just a dummy animation)
+            AnimationCurve curve = new AnimationCurve();
+            curve.AddKey(0f, 0f);
+            curve.AddKey(1f, 0f);
+            clip.SetCurve("", typeof(Transform), "localPosition.x", curve);
+            
+            // Save the animation clip as an asset
+            string clipPath = Path.Combine(savePath, $"{clipName}.anim");
+            AssetDatabase.CreateAsset(clip, clipPath);
+            
+            Debug.Log($"Created placeholder animation: {clipPath}");
+            return clip;
         }
     }
 } 

@@ -13,35 +13,36 @@ namespace bet_slum.Games.Slapfight
         [SerializeField] private SlapfightAgentController _agentPrefab;
         private ObjectPool<SlapfightAgentController> _agentPool;
 
-        public UIPopup _popup;
+        private Dictionary<string, CombatAnimation> _animationRegistry = new();
+        [SerializeField] private List<CombatAnimation> _animationList;
+        [System.Serializable]
+        public class CombatAnimation 
+        {
+            public string ID;
+            public AnimationClip AnimationClip;
+        }
 
+        public UIPopup _popup;
+        private const uint MaxAbilities = 32;
         public override int MaxCompetitorCount => 4;
 
         // fighter config
-        //public GameObject FighterModel;
         public RuntimeAnimatorController FighterAnimatorController;
-        public AnimationClip FighterAAnimation; 
-        public AnimationClip FighterBAnimation;
 
         public List<GameObject> FighterModels;
 
-        public List<FighterAbility> FighterAbilityDefinitions;
-
         public FighterUIController FighterUIController;
-
-        [System.Serializable]
-        public class FighterAbility
-        {
-            public AnimationClip Animation;
-            public string Name;
-            public float Damage = 35f;
-        }
 
         public List<SlapfightAgentController> Fighters => _fighters;
         private List<SlapfightAgentController> _fighters = new();
 
         public async override Awaitable InitializeGameEnvironment(ShowRunner runner)
         {
+            foreach(var clip in _animationList)
+            {
+                _animationRegistry.Add(clip.ID, clip);
+            }
+
             await base.InitializeGameEnvironment(runner);
 
             _agentPool = new(
@@ -82,31 +83,28 @@ namespace bet_slum.Games.Slapfight
                 return;
             }
 
-            var shuffledDefinitionsIndices = new List<int>();
-            for(int i = 0; i < FighterAbilityDefinitions.Count; i++)
-            {
-                shuffledDefinitionsIndices.Add(i);
-            }
             for(int i = 0; i < _competitorData.competitionTeams.Count; i++)
             {
-                var fighterData = _competitorData.competitionTeams[i].competitors[0];
+                var teamData = _competitorData.competitionTeams[i];
+                var fighterData = teamData.competitors[0];
+                var abilities = fighterData;
                 var _fighter = _agentPool.Get();
                 _fighter.transform.position = _spawnPoints[i].position;
                 _fighter.transform.rotation = Quaternion.LookRotation((new Vector3(0, _spawnPoints[i].position.y, 0) - _spawnPoints[i].position).normalized, Vector3.up);
                 var animator = new AnimatorOverrideController();
                 animator.runtimeAnimatorController = FighterAnimatorController;
 
-                shuffledDefinitionsIndices = shuffledDefinitionsIndices.Shuffle().ToList();
-                var abilities = new List<FighterAbility>();
-                var abilitiesPerFighter = 2;
-                for(int animIdx = 0;  animIdx < abilitiesPerFighter && animIdx < shuffledDefinitionsIndices.Count; animIdx++)
+                teamData.competitorData[fighterData.id].AvailableAbilities.Add(new Data.CompetitorAbilityDefinition { damage = 50f, animationName = "Default", name = "Attack" });
+                for (int k = 0; k < teamData.competitorData[fighterData.id].AvailableAbilities.Count && k <= MaxAbilities; k++)
                 {
-                    var abilityDefinition = FighterAbilityDefinitions[shuffledDefinitionsIndices[animIdx]];
-                    animator[$"Ability{animIdx}"] = abilityDefinition.Animation;
-                    abilities.Add(abilityDefinition);
+                    var ability = teamData.competitorData[fighterData.id].AvailableAbilities[k];
+                    if (_animationRegistry.TryGetValue(ability.animationName, out var animation)) 
+                        animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(animation.AnimationClip, $"Ability{k}"); 
+                    else
+                        animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(_animationRegistry["Default"].AnimationClip, $"Ability{k}");
                 }
 
-                _fighter.Initialize(i, this, fighterData, animator, abilities, _spawnPoints[i]);
+                _fighter.Initialize(i, this, _competitorData.competitionTeams[i].competitorData[fighterData.id], animator, _spawnPoints[i]);
                 _fighters.Add(_fighter);
             }
 
@@ -147,7 +145,7 @@ namespace bet_slum.Games.Slapfight
 
         private async Awaitable Update()
         {
-            if(!_running || _endRoundFired) return;
+            if(!_running || _endRoundFired || _turnRunning) return;
 
             if (_fighters.Count(f => !f.IsDead) <= 1) // endgame conditions
             {
@@ -156,24 +154,18 @@ namespace bet_slum.Games.Slapfight
                 {
                     if (!fighter.IsDead)
                     {
-                        Debug.Log($"{fighter.Competitor.id}");
+                        Debug.Log($"{fighter.Competitor.competitor.id}");
                         break;
                     }
                 }
-                await Task.Delay(2000); // let death happen
+
                 // this is bad
                 _endRoundFired = true;
-                await EndMatch();
+                await EndMatch(); // this IMMEDIATELY starts the next match
                 _endRoundFired = false;
                 return;
             }
 
-            if (_turnRunning) return;
-
-            // make fighter A attack
-            // wait on completion
-            // damage can be dealt at any time during this period
-            // make fighter B attack
             await BeginNextTurn();
         }
 
@@ -203,22 +195,8 @@ namespace bet_slum.Games.Slapfight
 
         public async Awaitable EndTurn()
         {
-            //_fighters[_fighterTurnIndex].SoloCamera.gameObject.SetActive(false);
-            
             var target = _fighters[_fighters[_fighterTurnIndex].CurrentTargetIndex];
-            //target.SoloCamera.gameObject.SetActive(true);
-            //await Task.Delay(500/*current transition speed is 0.65*/);
 
-            //var source = _fighters[_fighterTurnIndex];
-            //var sourceAttack = source.Abilities[source.CurrentAbilityIndex];
-            //target.TakeDamage(sourceAttack.Damage);
-            //if(target.IsDead)
-            //    target.Animator.SetTrigger("Killed");
-            //else
-            //    target.Animator.SetTrigger("Damaged");
-
-            // TODO - wait on their sequence to end, might haev a diff animation
-            //await Task.Delay(4000);
             target.SoloCamera.gameObject.SetActive(false);
 
             _turnRunning = false;

@@ -1,8 +1,6 @@
 
 // TODO - sync w/ bet-slum-shared lib
-using System;
 using System.Collections.Generic;
-using System.Diagnostics;
 using System.Linq;
 
 namespace bet_slum.Data
@@ -47,9 +45,9 @@ namespace bet_slum.Data
                 foreach (var competitor in team.competitors)
                 {
                     if (competitor.id.Equals(competitorID)
-                        && team.competitorStats.TryGetValue(competitorID, out var statList))
+                        && team.competitorData.TryGetValue(competitorID, out var statList))
                     {
-                        return statList.FirstOrDefault(s => s.competitorStatDefinitionID == statDefinitionID)?.value ?? defaultValue;
+                        return statList.stats.FirstOrDefault(s => s.competitorStatDefinitionID == statDefinitionID)?.value ?? defaultValue;
                     }
                 }
             }
@@ -61,7 +59,47 @@ namespace bet_slum.Data
     public class GameCompetitionTeamData
     {
         public List<Competitor> competitors;
-        public Dictionary<string, List<CompetitorStat>> competitorStats;
+        public Dictionary<string, CompetitorData> competitorData;
+    }
+    public class CompetitorItem
+    {
+        public string id;
+
+        public string competitorID;
+        public string itemDefinitionID;
+    }
+    public class CompetitorAbilityDefinition
+    {
+        public string id;
+        public string name;
+        public string animationName;
+        public float damage;
+    }
+
+    /// <summary>
+    /// Class to hold competitor data including inventory, stats, and available abilities
+    /// </summary>
+    public class CompetitorData
+    {
+        /// <summary>
+        /// The competitor
+        /// </summary>
+        public Competitor? competitor;
+
+        /// <summary>
+        /// The competitor's inventory items
+        /// </summary>
+        public List<CompetitorItem> inventory;
+
+        /// <summary>
+        /// The competitor's stats
+        /// </summary>
+        public List<CompetitorStat> stats;
+
+        /// <summary>
+        /// Abilities the competitor can use based on their inventory and stats
+        /// </summary>
+        public List<CompetitorAbilityDefinition> AvailableAbilities { get; set; } = new List<CompetitorAbilityDefinition>();
     }
 }
 
