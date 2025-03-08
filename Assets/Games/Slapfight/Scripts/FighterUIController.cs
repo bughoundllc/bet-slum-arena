@@ -39,6 +39,9 @@ public class FighterUIController : MonoBehaviour
             fighterUI.HPSlider.value = 1f;
             fighterUI.HPBackgroundSlider.value = 1f;
             fighterUI.itemRow.Refresh(fighter.Competitor.inventory);
+            fighterUI.Stat1Label.SetText(fighter.Competitor.stats[0].value.ToString());
+            fighterUI.Stat2Label.SetText(fighter.Competitor.stats[1].value.ToString());
+            fighterUI.Stat3Label.SetText(fighter.Competitor.stats[2].value.ToString());
         }
     }
 

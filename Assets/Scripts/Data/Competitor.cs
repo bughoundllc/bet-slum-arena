@@ -17,7 +17,7 @@ namespace bet_slum.Data
         public string id;
         public string competitorID;
         public string competitorStatDefinitionID;
-        public float value;
+        public uint value;
     }
 
     public class GameCompetitionInfo

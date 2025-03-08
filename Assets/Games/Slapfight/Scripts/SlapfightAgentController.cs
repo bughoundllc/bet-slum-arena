@@ -31,7 +31,7 @@ namespace bet_slum.Games.Slapfight
 
         public int CurrentAbilityIndex = -1;
         public int CurrentTargetIndex = -1;
-        private Transform _spawnPosition;
+        private Vector3 _spawnPosition;
         private NavMeshAgent _agent;
         private int _fighterIndex;
         public Transform AttackerPosition;
@@ -42,11 +42,11 @@ namespace bet_slum.Games.Slapfight
             SlapfightMatchRunner matchRunner,
             CompetitorData competitorData,
             RuntimeAnimatorController animatorController,
-            Transform spawnPoint)
+            Vector3 spawnPosition)
         {
             _fighterIndex = fighterIndex;
             _agent = GetComponent<NavMeshAgent>();
-            _spawnPosition = spawnPoint;
+            _spawnPosition = spawnPosition;
             _nameLabel.SetText($"{competitorData.competitor.name}");
             _matchRunner = matchRunner;
             _competitorData = competitorData;
@@ -118,7 +118,7 @@ namespace bet_slum.Games.Slapfight
                 await Task.Delay(1);
             }
             // TODO - animate turn
-            transform.rotation = Quaternion.LookRotation((targetPosition - transform.position).normalized, Vector3.up);
+            transform.rotation = Quaternion.LookRotation((target.transform.position - transform.position).normalized, Vector3.up);
 
             _agent.isStopped = true;
 
@@ -147,7 +147,7 @@ namespace bet_slum.Games.Slapfight
 
             // Return to spawn
             _agent.isStopped = false;
-            targetPosition = _spawnPosition.position;
+            targetPosition = _spawnPosition;
             dirTo = targetPosition - transform.position;
             transform.rotation = Quaternion.LookRotation(dirTo.normalized, Vector3.up);
             // ignore y
@@ -159,7 +159,7 @@ namespace bet_slum.Games.Slapfight
             }
             //Debug.Log("Player returned to spawn");
             // TODO - animate turn toward center
-            transform.rotation = Quaternion.LookRotation((new Vector3(0, _spawnPosition.position.y, 0) - _spawnPosition.position).normalized, Vector3.up);
+            transform.rotation = Quaternion.LookRotation((new Vector3(0, _spawnPosition.y, 0) - _spawnPosition).normalized, Vector3.up);
             
             await _matchRunner.EndTurn();
         }

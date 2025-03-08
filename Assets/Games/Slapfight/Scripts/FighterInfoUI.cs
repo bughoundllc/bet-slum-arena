@@ -11,6 +11,9 @@ public class FighterInfoUI : MonoBehaviour
     public Slider HPBackgroundSlider;
     public ItemRowController itemRow;
     public float bgSliderSpeed;
+    public TMP_Text Stat1Label;
+    public TMP_Text Stat2Label;
+    public TMP_Text Stat3Label;
 
     private void Update()
     {
