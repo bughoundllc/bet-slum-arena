@@ -53,44 +53,45 @@ public static class AnimationUtility
             newClip.events = newEvents;
         }
 
-#if UNITY_EDITOR
-        // Use the editor API for perfect cloning when in the editor
-        try
-        {
-            UnityEditor.EditorCurveBinding[] bindings = UnityEditor.AnimationUtility.GetCurveBindings(originalClip);
-            foreach (var binding in bindings)
-            {
-                AnimationCurve curve = UnityEditor.AnimationUtility.GetEditorCurve(originalClip, binding);
-                if (curve != null)
-                {
-                    AnimationCurve curveCopy = new AnimationCurve(curve.keys);
-                    curveCopy.preWrapMode = curve.preWrapMode;
-                    curveCopy.postWrapMode = curve.postWrapMode;
+// DO NOT REIMPLEMENT
+// #if UNITY_EDITOR
+//         // Use the editor API for perfect cloning when in the editor
+//         try
+//         {
+//             UnityEditor.EditorCurveBinding[] bindings = UnityEditor.AnimationUtility.GetCurveBindings(originalClip);
+//             foreach (var binding in bindings)
+//             {
+//                 AnimationCurve curve = UnityEditor.AnimationUtility.GetEditorCurve(originalClip, binding);
+//                 if (curve != null)
+//                 {
+//                     AnimationCurve curveCopy = new AnimationCurve(curve.keys);
+//                     curveCopy.preWrapMode = curve.preWrapMode;
+//                     curveCopy.postWrapMode = curve.postWrapMode;
                     
-                    UnityEditor.AnimationUtility.SetEditorCurve(newClip, binding, curveCopy);
-                }
-            }
+//                     UnityEditor.AnimationUtility.SetEditorCurve(newClip, binding, curveCopy);
+//                 }
+//             }
             
-            // Also check for object reference curves (like sprite swapping)
-            bindings = UnityEditor.AnimationUtility.GetObjectReferenceCurveBindings(originalClip);
-            foreach (var binding in bindings)
-            {
-                ObjectReferenceKeyframe[] keyframes = UnityEditor.AnimationUtility.GetObjectReferenceCurve(originalClip, binding);
-                if (keyframes != null && keyframes.Length > 0)
-                {
-                    UnityEditor.AnimationUtility.SetObjectReferenceCurve(newClip, binding, keyframes);
-                }
-            }
+//             // Also check for object reference curves (like sprite swapping)
+//             bindings = UnityEditor.AnimationUtility.GetObjectReferenceCurveBindings(originalClip);
+//             foreach (var binding in bindings)
+//             {
+//                 ObjectReferenceKeyframe[] keyframes = UnityEditor.AnimationUtility.GetObjectReferenceCurve(originalClip, binding);
+//                 if (keyframes != null && keyframes.Length > 0)
+//                 {
+//                     UnityEditor.AnimationUtility.SetObjectReferenceCurve(newClip, binding, keyframes);
+//                 }
+//             }
             
-            Debug.Log($"Successfully cloned animation clip: {newClip.name} using editor API");
-            return newClip;
-        }
-        catch (System.Exception e)
-        {
-            Debug.LogWarning($"Failed to clone animation data using editor API: {e.Message}");
-            // Fall through to runtime approach
-        }
-#endif
+//             Debug.Log($"Successfully cloned animation clip: {newClip.name} using editor API");
+//             return newClip;
+//         }
+//         catch (System.Exception e)
+//         {
+//             Debug.LogWarning($"Failed to clone animation data using editor API: {e.Message}");
+//             // Fall through to runtime approach
+//         }
+// #endif
 
         // RUNTIME CLONING APPROACH
         // This approach extracts animation curves from the original clip directly
@@ -271,9 +272,11 @@ public static class AnimationUtility
             {
                 float time = i * deltaTime;
                 
-                // Sample the animation at this time
+                // Sample the animation at this time - FIXED: Access animation state properly
                 anim.Play("clipToSample");
-                anim.time = time;
+                // Instead of anim.time = time (which doesn't exist), get the animation state:
+                AnimationState animState = anim["clipToSample"];
+                animState.time = time;
                 anim.Sample();
                 
                 // Get the value - this would need reflection to be generic
