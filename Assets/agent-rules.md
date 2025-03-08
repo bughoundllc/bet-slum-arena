@@ -6,6 +6,7 @@ RULES FOR THIS AI AGENT:
 - Do NOT implement features that have not been asked for without explicit permission from the user.
 - If you are creating or renaming a Data Structure, you MUST search the project to verify you are not introducing a duplicate into the namespace.
 - If you come across a configuration file with sensitive data in it (such as a connection string), DO NOT remove the data. However, you SHOULD add a comment or note and make mention of it in your summary to the user.
+- DO NOT produce new unrequested documentation.
 
 PROCEDURES TO FOLLOW:
 - If the files mentioned below do not exist, create and populate them.
