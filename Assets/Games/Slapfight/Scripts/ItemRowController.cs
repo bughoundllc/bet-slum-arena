@@ -1,6 +1,8 @@
 using bet_slum.Data;
 using NUnit.Framework;
 using System.Collections.Generic;
+using System.IO;
+using System.Linq;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -11,15 +13,53 @@ namespace bet_slum.Slapfight
         public GameObject iconPrototype;
         private List<GameObject> _items = new();
 
-        // TODO - move
-        private Dictionary<string, string> IconFilePathRegistry = new Dictionary<string, string> 
-        {
-            {"Toad", "Icons/Items/Toad" }
-        };
+        // Registry that maps item keys to their resource paths
+        private Dictionary<string, string> IconFilePathRegistry = new Dictionary<string, string>();
+        
+        // Base path for item icons
+        private const string IconBasePath = "Icons/Items";
 
         private void Start()
         {
             iconPrototype.gameObject.SetActive(false);
+            
+            // Scan and populate the IconFilePathRegistry
+            PopulateIconRegistry();
+        }
+        
+        /// <summary>
+        /// Scans the Icons/Items directory and populates the IconFilePathRegistry
+        /// Keys and filenames are kept identical, with paths formatted as "Icons/Items/{filename}"
+        /// </summary>
+        private void PopulateIconRegistry()
+        {
+            // Clear existing registry
+            IconFilePathRegistry.Clear();
+            
+            // Load all sprites from the Resources folder at the specified path
+            Sprite[] icons = Resources.LoadAll<Sprite>(IconBasePath);
+            
+            foreach (Sprite icon in icons)
+            {
+                // Get the icon name (filename without extension)
+                string iconName = icon.name;
+                
+                // Add to registry with key and path
+                string iconPath = $"{IconBasePath}/{iconName}";
+                IconFilePathRegistry[iconName] = iconPath;
+                
+                Debug.Log($"Registered icon: {iconName} -> {iconPath}");
+            }
+            
+            // If no icons were found, log a warning
+            if (IconFilePathRegistry.Count == 0)
+            {
+                Debug.LogWarning($"No icons found in Resources/{IconBasePath}. IconFilePathRegistry is empty.");
+            }
+            else
+            {
+                Debug.Log($"Populated IconFilePathRegistry with {IconFilePathRegistry.Count} icons.");
+            }
         }
 
         public void Refresh(List<InventoryItemDTO> items)
