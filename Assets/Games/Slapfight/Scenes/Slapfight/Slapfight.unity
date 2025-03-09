@@ -1484,7 +1484,7 @@ Camera:
     height: 1
   near clip plane: 0.3
   far clip plane: 1000
-  field of view: 120
+  field of view: 110
   orthographic: 0
   orthographic size: 5
   m_Depth: -1
@@ -3311,7 +3311,7 @@ MonoBehaviour:
     LookAtTarget: {fileID: 0}
     CustomLookAtTarget: 0
   Lens:
-    FieldOfView: 120
+    FieldOfView: 110
     OrthographicSize: 5
     NearClipPlane: 0.3
     FarClipPlane: 1000
@@ -3508,6 +3508,8 @@ MonoBehaviour:
     AnimationClip: {fileID: 7400000, guid: e5e18fb9cca1f7143bc9bfaebe5b1210, type: 2}
   - ID: BasicMagic
     AnimationClip: {fileID: 7400000, guid: c5fc8ffd50e527243b7fc2f1f574bb51, type: 2}
+  - ID: PistolShot
+    AnimationClip: {fileID: 7400000, guid: 5afb3de556a008145ac97e38a109631c, type: 2}
   _popup: {fileID: 807916654}
   FighterAnimatorController: {fileID: 9100000, guid: 4408178bd842c3d4fad983ad410ccfa8, type: 2}
   FighterModels:

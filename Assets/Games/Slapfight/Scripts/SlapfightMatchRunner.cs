@@ -110,7 +110,6 @@ namespace bet_slum.Games.Slapfight
                 
                 var animator = new AnimatorOverrideController();
                 animator.runtimeAnimatorController = FighterAnimatorController;
-                teamData.competitorData[fighterData.id].availableAbilities.Add(new Data.CompetitorAbilityDefinition { damage = BASIC_ATTACK_DAMAGE, animationName = "Default", name = "Attack" });
                 for (int k = 0; k < teamData.competitorData[fighterData.id].availableAbilities.Count && k <= MaxAbilities; k++)
                 {
                     var ability = teamData.competitorData[fighterData.id].availableAbilities[k];
