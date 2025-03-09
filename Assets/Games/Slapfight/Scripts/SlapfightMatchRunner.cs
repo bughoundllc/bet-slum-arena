@@ -37,7 +37,7 @@ namespace bet_slum.Games.Slapfight
 
         // NOTE - when we hit MaxAbilities, we'll need to shuffle/sort then Take(MaxAbilities) when creating fighter
         private const uint MaxAbilities = 32;
-        public override int MaxCompetitorCount => 3;//6;
+        public override int MaxCompetitorCount => 6;//6;
 
         // fighter config
         public RuntimeAnimatorController FighterAnimatorController;

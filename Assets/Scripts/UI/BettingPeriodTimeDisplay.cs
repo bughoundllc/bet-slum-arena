@@ -1,6 +1,7 @@
 using TMPro;
 using Unity.Mathematics;
 using UnityEngine;
+using UnityEngine.UI;
 
 namespace bet_slum.UI
 {
@@ -9,6 +10,7 @@ namespace bet_slum.UI
     {
         private TMP_Text _text;
         private ShowRunner _runner;
+        public Image img;
 
         private void Awake()
         {
@@ -21,10 +23,12 @@ namespace bet_slum.UI
             if(!_runner.BettingIsEnabled)
             {
                 _text.SetText("");
+                img.enabled = false;
                 return;
             }
 
-            _text.SetText($"{math.max(0f,  _runner.RemainingBetDuration):F2}");
+            img.enabled = true;
+            _text.SetText($"/bet\n{math.max(0f,  _runner.RemainingBetDuration):F2}");
         }
     }
 
