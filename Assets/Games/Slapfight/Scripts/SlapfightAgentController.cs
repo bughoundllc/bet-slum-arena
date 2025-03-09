@@ -127,9 +127,7 @@ namespace bet_slum.Games.Slapfight
             Debug.Log($"setting index to {CurrentAbilityIndex}");
             Animator.SetInteger("AbilityIndex", CurrentAbilityIndex);
             Debug.Log($"gonna popup {ability.ability.name}");
-            //Debug.Log($"{ability.statRequirements}");
-            if(ability.itemRequirements.Count > 0)
-                Debug.Log($"{ability.itemRequirements}");
+            
             //Debug.Log($"{_matchRunner._popup}");
             _matchRunner._popup.Show($"{ability.ability.name} ({ability.ability.damage})", ability.statRequirements?.Select(r => (r.statDefinition.name, r.value)).ToList(), ability.itemRequirements?.Select(r => r.item.icon).ToList());
 

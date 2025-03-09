@@ -17,7 +17,14 @@ namespace bet_slum.showRunner
                 competitors.Add(new GameCompetitionTeamData
                 {
                     competitors = new() { competitor },
-                    competitorData = new() { { competitor.id, new CompetitorData { inventory = new(), stats = new(), availableAbilities = new(), competitor = competitor } } }
+                    competitorData = new() { { competitor.id, 
+                            new CompetitorData { 
+                                inventory = new(), 
+                                stats = new() { new CompetitorStat { value = 1 }, new CompetitorStat { value = 1 }, new CompetitorStat { value = 1 } }, 
+                                availableAbilities = new() { 
+                                    new AbilityWithRequirementsDTO 
+                                    { 
+                                        ability = new CompetitorAbilityDefinition { animationName = "Default", name = "Attack", damage = 50f }, itemRequirements = new(), statRequirements = new() } }, competitor = competitor } } }
                 });
             }
             return new()

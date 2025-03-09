@@ -6,37 +6,40 @@ EditorUserSettings:
   serializedVersion: 4
   m_ConfigSettings:
     GraphicsSettingsInspector_UserSettings:
-      value: 18134705175a055722080a3115371d4a0d55006876786860616b0471b8b6676aacb72ba5a52a362c3c0ee63201181433fe3e101bf3250b06144ca74c24f1190708e016c213c61a52f91c12cac80fd8edd298e1e4d1fde2cacddeacbcc1fee7eef0e3b6faa69af9ceaeaaec81a6d2c2c8c8c4b2e5dfd5ccd3f8cf
+      value: 18134705175a055722080a3115371d4a0d55006876786860616b0471b8b8626cacb72ba5a52a362c3c0ee63201181433fe3e101bf3250b06144ca74c24f1190708e016c213c61a52f91c12cac80fd8edd298e1e4d1fde2cacddeacbcc1fee7eef0e3b6faa69af9ceaeaaec81a6d2c2c8c8c4b2e5dfd5ccd3f8cf
       flags: 0
     RecentlyUsedSceneGuid-0:
-      value: 5304520300070b09545e5c7448740644104e19732d7b7331297a4c30b0b0376e
-      flags: 0
-    RecentlyUsedSceneGuid-1:
       value: 5408550351070f03080b5f714671094413164f7e2f2b70327f2f4d35b0b3646a
       flags: 0
-    RecentlyUsedSceneGuid-2:
+    RecentlyUsedSceneGuid-1:
       value: 0753000403535e0a5b58587616770e11154e197e7b7e246778711e37b0b66c3d
       flags: 0
-    RecentlyUsedSceneGuid-3:
+    RecentlyUsedSceneGuid-2:
       value: 57040353550c0b5d0e0f5a2012725c444e154d7e7a7b7435292a4f30e3b2626b
       flags: 0
-    RecentlyUsedSceneGuid-4:
+    RecentlyUsedSceneGuid-3:
       value: 070703020003515f08580f7545705b44411619282a2c27352e70496abbe56039
       flags: 0
-    RecentlyUsedSceneGuid-5:
+    RecentlyUsedSceneGuid-4:
       value: 5b06570355020a0e540b5a7443720f444f4f1d2e292e736828781b62e6b1353b
       flags: 0
-    RecentlyUsedSceneGuid-6:
+    RecentlyUsedSceneGuid-5:
       value: 0709525454060b09555c5475147b5d4412161a7e7e2b20642c7a4935bbb4316d
       flags: 0
-    RecentlyUsedSceneGuid-7:
+    RecentlyUsedSceneGuid-6:
       value: 00060754500c5a5d08595a2745220744474e4f2c752b22617e704b60e4b7646e
       flags: 0
+    RecentlyUsedSceneGuid-7:
+      value: 5a55560352025f035c5d5a234174094445164b72797e716279281e65b2b4306a
+      flags: 0
     RecentlyUsedSceneGuid-8:
-      value: 00040c500057590e0f080e72457b0d44474e19797979203675714c37bbb4643e
+      value: 545504565c560d02540d0e7041270b44124f412f297b7563792d4560e3b4373c
       flags: 0
     RecentlyUsedSceneGuid-9:
-      value: 5a55560352025f035c5d5a234174094445164b72797e716279281e65b2b4306a
+      value: 00040c500057590e0f080e72457b0d44474e19797979203675714c37bbb4643e
+      flags: 0
+    lightmappingBakingProfile:
+      value: 51
       flags: 0
     vcSharedLogLevel:
       value: 0d5e400f0650
