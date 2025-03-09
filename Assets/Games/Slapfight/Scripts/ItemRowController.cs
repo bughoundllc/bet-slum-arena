@@ -15,6 +15,7 @@ namespace bet_slum.Slapfight
 
         // Registry that maps item keys to their resource paths
         private Dictionary<string, string> IconFilePathRegistry = new Dictionary<string, string>();
+        private bool _initialized = false;
         
         // Base path for item icons
         private const string IconBasePath = "Icons/Items";
@@ -24,7 +25,7 @@ namespace bet_slum.Slapfight
             iconPrototype.gameObject.SetActive(false);
             
             // Scan and populate the IconFilePathRegistry
-            PopulateIconRegistry();
+            //PopulateIconRegistry();
         }
         
         /// <summary>
@@ -60,10 +61,15 @@ namespace bet_slum.Slapfight
             {
                 Debug.Log($"Populated IconFilePathRegistry with {IconFilePathRegistry.Count} icons.");
             }
+
+            _initialized = true;
         }
 
         public void Refresh(List<InventoryItemDTO> items)
         {
+            if (!_initialized)
+                PopulateIconRegistry();
+
             foreach(var item in _items)
                 GameObject.Destroy(item);
             _items.Clear();
@@ -78,6 +84,7 @@ namespace bet_slum.Slapfight
                     var image = Resources.Load<Sprite>(path);
                     if (image != null)
                     {
+                        Debug.Log($"Setting icon to {image.name}");
                         go.GetComponent<Image>().sprite = image;
                     }
                     else

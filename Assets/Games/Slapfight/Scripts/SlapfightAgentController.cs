@@ -54,8 +54,8 @@ namespace bet_slum.Games.Slapfight
             MaxHP = competitorData.stats.Sum(s => s.value) * _hpPerLevel;
 
             // spawn avatar - simpler to spawn different for now, until all possible options are cached 
-            Debug.Log("Initializing agent");
-            Debug.Log(animatorController);
+            //Debug.Log("Initializing agent");
+            //Debug.Log(animatorController);
             if (_avatarModel != null)
                 GameObject.Destroy(_avatarModel);
             _avatarModel = GameObject.Instantiate(_matchRunner.FighterModels[0], transform);
