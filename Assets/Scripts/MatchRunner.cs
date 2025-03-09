@@ -1,5 +1,6 @@
 using bet_slum.CombatArena.Agents;
 using bet_slum.Data;
+using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 using UnityEngine.Events;
@@ -15,6 +16,7 @@ namespace bet_slum
         public GameCompetitionInfo CompetitorData { get { return _competitorData; } }
         protected GameCompetitionInfo _competitorData;
         protected virtual int WinnerID => -1;
+        public virtual Dictionary<int, uint> TeamRanks => null;
         public virtual int MaxCompetitorCount => -1;
 
         public virtual async Awaitable InitializeGameEnvironment(ShowRunner runner)

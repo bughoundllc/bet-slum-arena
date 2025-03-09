@@ -115,14 +115,6 @@ namespace bet_slum
         public virtual async Awaitable OnMatchEnd(int winnerID)
         {
             await _matchRunner.InitializeMatchEnvironment();
-            //await Task.Delay((int)(_postRoundStartBettingDelay * 1000));
-            //await StartBettingPeriod();
         }
-    }
-
-    // TODO - DUPLICATED - move to Shared for Game/Server
-    public class PayoutInfo
-    {
-        public uint WinnerID { get; set; }
     }
 }

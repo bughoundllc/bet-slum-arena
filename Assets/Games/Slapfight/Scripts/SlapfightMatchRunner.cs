@@ -12,6 +12,7 @@ namespace bet_slum.Games.Slapfight
         [SerializeField] private float _fighterWidth = 1.0f; // Typical width of a fighter entity
         [SerializeField] private float _fighterSpacing = 0.5f; // Buffer space between fighters
         [SerializeField] private float _minimumCircleRadius = 5.0f; // Minimum radius regardless of calculation
+        public List<SlapfightAgentController> _deadFighters = new();
 
 
         [SerializeField] private SlapfightAgentController _agentPrefab;
@@ -158,11 +159,28 @@ namespace bet_slum.Games.Slapfight
             await base.EndMatch();
         }
 
+        // keep track of competitors as they die
+        // on game end, pop them out and iterate
         protected override int WinnerID {
             get
             {
                 var winner = _fighters.FirstOrDefault(f => !f.IsDead);
                 return winner == null ? -1 : _fighters.IndexOf(winner);
+            }
+        }
+
+
+        public override Dictionary<int, uint> TeamRanks
+        {
+            get
+            {
+                var ranks = new Dictionary<int, uint>();
+                for(int i = 0; i < _fighters.Count; i++)
+                {
+                    var deathOrder = _deadFighters.IndexOf(_fighters[i]);
+                    ranks.Add(i,  (uint)(deathOrder == -1 ? 0 : _fighters.Count - deathOrder));
+                }
+                return ranks;
             }
         }
 

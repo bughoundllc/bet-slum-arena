@@ -2,6 +2,7 @@ using bet_slum.Data;
 using Google.Cloud.SecretManager.V1;
 using Newtonsoft.Json;
 using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using UnityEngine;
 
@@ -71,6 +72,7 @@ namespace bet_slum.showRunner
 
             var bodyForm = new WWWForm();
             bodyForm.AddField("WinnerID", winnerID);
+            bodyForm.AddField("TeamRanks", JsonConvert.SerializeObject(_matchRunner.TeamRanks));
             await NetworkController.POST("game", "payout-bets", bodyForm);
 
             await base.OnMatchEnd(winnerID);

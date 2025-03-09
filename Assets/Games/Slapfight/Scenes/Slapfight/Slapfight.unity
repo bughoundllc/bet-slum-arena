@@ -3842,6 +3842,7 @@ MonoBehaviour:
   _fighterWidth: 2
   _fighterSpacing: 1
   _minimumCircleRadius: 4
+  _deadFighters: []
   _agentPrefab: {fileID: 8097885541823743468, guid: 85841e50e753a6d409cbd494837847aa, type: 3}
   _animationList:
   - ID: Default
@@ -3861,7 +3862,7 @@ MonoBehaviour:
   _popup: {fileID: 807916654}
   FighterAnimatorController: {fileID: 9100000, guid: 4408178bd842c3d4fad983ad410ccfa8, type: 2}
   FighterModels:
-  - {fileID: 3620499613393879927, guid: 03a371eaa7f2f104e9b7483eaaf05091, type: 3}
+  - {fileID: 919132149155446097, guid: bafe88e8a556ed844bd827a82c91b5ac, type: 3}
   FighterUIController: {fileID: 1892347446}
 --- !u!4 &1418755463
 Transform:

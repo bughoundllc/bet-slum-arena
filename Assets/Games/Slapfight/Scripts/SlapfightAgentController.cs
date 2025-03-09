@@ -149,7 +149,10 @@ namespace bet_slum.Games.Slapfight
             // probably shouldnt be handling this here uwu
             target.TakeDamage(ability.ability.damage);
             if (target.IsDead)
+            { 
                 target.Animator.SetTrigger("Killed");
+                _matchRunner._deadFighters.Add(target);
+            }
             else
                 target.Animator.SetTrigger("Damaged");
 
