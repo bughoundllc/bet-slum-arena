@@ -28,7 +28,7 @@ namespace bet_slum.Games.Slapfight
         public bool IsDead => HP <= 0f;
         public float HP;
         public float MaxHP;
-        private float _hpPerLevel = 100f;
+        private float _hpPerLevel = 150f;
 
         public int CurrentAbilityIndex = -1;
         public int CurrentTargetIndex = -1;
@@ -51,7 +51,7 @@ namespace bet_slum.Games.Slapfight
             _nameLabel.SetText($"{competitorData.competitor.name}");
             _matchRunner = matchRunner;
             _competitorData = competitorData;
-            MaxHP = competitorData.stats.Sum(s => s.value) * _hpPerLevel;
+            MaxHP = competitorData.stats[0].value * _hpPerLevel;
 
             // spawn avatar - simpler to spawn different for now, until all possible options are cached 
             //Debug.Log("Initializing agent");
@@ -100,11 +100,11 @@ namespace bet_slum.Games.Slapfight
             CurrentTargetIndex = validTargetIndices[UnityEngine.Random.Range(0, validTargetIndices.Count)];
             
             CurrentAbilityIndex =
-            // get most damaging
-                _competitorData.availableAbilities.IndexOf(_competitorData.availableAbilities.OrderByDescending(a => a.damage).First());
-            // get random
-                // UnityEngine.Random.Range(0, _competitorData.AvailableAbilities.Count);
-            
+                 // get most damaging
+                 //_competitorData.availableAbilities.IndexOf(_competitorData.availableAbilities.OrderByDescending(a => a.damage).First());
+                 // get random
+                 UnityEngine.Random.Range(0, _competitorData.availableAbilities.Count);
+
             var target = _matchRunner.Fighters[CurrentTargetIndex];
             var ability = _competitorData.availableAbilities[CurrentAbilityIndex];
 
@@ -124,11 +124,17 @@ namespace bet_slum.Games.Slapfight
 
             _agent.isStopped = true;
 
-            // TODO - dont think this works
+            Debug.Log($"setting index to {CurrentAbilityIndex}");
             Animator.SetInteger("AbilityIndex", CurrentAbilityIndex);
-            _matchRunner._popup.Show($"{ability.name}");
-            
-            
+            Debug.Log($"gonna popup {ability.ability.name}");
+            //Debug.Log($"{ability.statRequirements}");
+            if(ability.itemRequirements.Count > 0)
+                Debug.Log($"{ability.itemRequirements}");
+            //Debug.Log($"{_matchRunner._popup}");
+            _matchRunner._popup.Show($"{ability.ability.name} ({ability.ability.damage})", ability.statRequirements?.Select(r => (r.statDefinition.name, r.value)).ToList(), ability.itemRequirements?.Select(r => r.item.icon).ToList());
+
+
+            Debug.Log($"firing use ability");
             Animator.SetTrigger("UseAbility");
             _attacking = true;
             while (_attacking)
@@ -141,7 +147,7 @@ namespace bet_slum.Games.Slapfight
             target.SoloCamera.gameObject.SetActive(true);
 
             // probably shouldnt be handling this here uwu
-            target.TakeDamage(ability.damage);
+            target.TakeDamage(ability.ability.damage);
             if (target.IsDead)
                 target.Animator.SetTrigger("Killed");
             else

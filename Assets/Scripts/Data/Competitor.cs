@@ -99,6 +99,49 @@ namespace bet_slum.Data
         public ItemDefinition definition;
     }
 
+    public class CompetitorStatDefinition
+    {
+        public string? id;
+        public string? name;
+    }
+
+    public class CompetitorAbilityItemRequirement
+    {
+        public string id;
+
+        public string abilityDefinitionID;
+        public ItemDefinition item;
+    }
+
+    public class CompetitorAbilityStatRequirement
+    {
+        public string id;
+        public string abilityDefinitionID;
+        public CompetitorStatDefinition statDefinition;
+        public uint value;
+    }
+
+    /// <summary>
+    /// Data transfer object that combines an ability with its item and stat requirements
+    /// </summary>
+    public class AbilityWithRequirementsDTO
+    {
+        /// <summary>
+        /// The ability definition
+        /// </summary>
+        public CompetitorAbilityDefinition ability;
+
+        /// <summary>
+        /// The item requirements for this ability
+        /// </summary>
+        public List<CompetitorAbilityItemRequirement> itemRequirements;
+
+        /// <summary>
+        /// The stat requirements for this ability
+        /// </summary>
+        public List<CompetitorAbilityStatRequirement> statRequirements;
+    }
+
     /// <summary>
     /// Class to hold competitor data including inventory, stats, and available abilities
     /// </summary>
@@ -122,7 +165,7 @@ namespace bet_slum.Data
         /// <summary>
         /// Abilities the competitor can use based on their inventory and stats
         /// </summary>
-        public List<CompetitorAbilityDefinition> availableAbilities;
+        public List<AbilityWithRequirementsDTO> availableAbilities;
     }
 }
 

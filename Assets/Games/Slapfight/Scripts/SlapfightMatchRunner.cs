@@ -13,8 +13,6 @@ namespace bet_slum.Games.Slapfight
         [SerializeField] private float _fighterSpacing = 0.5f; // Buffer space between fighters
         [SerializeField] private float _minimumCircleRadius = 5.0f; // Minimum radius regardless of calculation
 
-        // TODO - store this somewhere
-        public static float BASIC_ATTACK_DAMAGE = 10f;
 
         [SerializeField] private SlapfightAgentController _agentPrefab;
         private ObjectPool<SlapfightAgentController> _agentPool;
@@ -29,8 +27,10 @@ namespace bet_slum.Games.Slapfight
         }
 
         public UIPopup _popup;
+
+        // NOTE - when we hit MaxAbilities, we'll need to shuffle/sort then Take(MaxAbilities) when creating fighter
         private const uint MaxAbilities = 32;
-        public override int MaxCompetitorCount => 5;
+        public override int MaxCompetitorCount => 6;
 
         // fighter config
         public RuntimeAnimatorController FighterAnimatorController;
@@ -113,7 +113,7 @@ namespace bet_slum.Games.Slapfight
                 for (int k = 0; k < teamData.competitorData[fighterData.id].availableAbilities.Count && k <= MaxAbilities; k++)
                 {
                     var ability = teamData.competitorData[fighterData.id].availableAbilities[k];
-                    if (_animationRegistry.TryGetValue(ability.animationName, out var animation))
+                    if (_animationRegistry.TryGetValue(ability.ability.animationName, out var animation))
                         animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(animation.AnimationClip, $"Ability{k}");
                     else
                         animator[$"Ability{k}"] = AnimationUtility.CloneAnimationClip(_animationRegistry["Default"].AnimationClip, $"Ability{k}");
