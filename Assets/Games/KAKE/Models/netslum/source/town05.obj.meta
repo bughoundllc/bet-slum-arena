@@ -3,7 +3,92 @@ guid: 48ba70311d716694c9ed884acdc34bc9
 ModelImporter:
   serializedVersion: 22200
   internalIDToNameTable: []
-  externalObjects: {}
+  externalObjects:
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5bac1
+    second: {fileID: 2100000, guid: 08f72ee154523d34b8d44f26ad7b685b, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5flo1
+    second: {fileID: 2100000, guid: 0f4a8490e9ddeda478055f123987814a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5flo2
+    second: {fileID: 2100000, guid: a4b8f4a14b2e2bd4d9573a99d277a34c, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5flo3
+    second: {fileID: 2100000, guid: 9a58b50c1d683484d8d4df31e01b23cd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5flo4
+    second: {fileID: 2100000, guid: 9a7326f192b3e0d478f85526248d7334, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5flo5
+    second: {fileID: 2100000, guid: 3a790df0ccd257a4b82cf26a0c68ec72, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5flo6
+    second: {fileID: 2100000, guid: 72bb36c2181896c45938d003b4ace594, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5oba1
+    second: {fileID: 2100000, guid: d1c6f8fb0e7e98b4795f8a72b20d35c5, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5oba2
+    second: {fileID: 2100000, guid: 2b2a9f69649e9594b909256c3d54219a, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5oba3
+    second: {fileID: 2100000, guid: 12f42990f81a4824d9e37df96a722142, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5oba5
+    second: {fileID: 2100000, guid: da95a98b5df9e5b46a28f66e5ec929b2, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5obj1
+    second: {fileID: 2100000, guid: 1675f11ae46c852459c98c9168089318, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5obj2
+    second: {fileID: 2100000, guid: 10ead2eac33ec2946a7d488b197cfc6d, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5obj3
+    second: {fileID: 2100000, guid: c5151f841ae926342a1ac769b6ea66fd, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5obj4
+    second: {fileID: 2100000, guid: 7082481aa1c34584ab5afe90f7c68cc1, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5obj5
+    second: {fileID: 2100000, guid: f887c2a16d75f0343a0caee7d70fe933, type: 2}
+  - first:
+      type: UnityEngine:Material
+      assembly: UnityEngine.CoreModule
+      name: TEX_sr5obj6
+    second: {fileID: 2100000, guid: 5d228ad12cb13d347891a356b4c5f8ad, type: 2}
   materials:
     materialImportMode: 2
     materialName: 0

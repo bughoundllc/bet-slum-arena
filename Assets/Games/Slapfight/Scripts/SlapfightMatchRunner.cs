@@ -1,6 +1,7 @@
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.Pool;
 
@@ -13,6 +14,10 @@ namespace bet_slum.Games.Slapfight
         [SerializeField] private float _fighterSpacing = 0.5f; // Buffer space between fighters
         [SerializeField] private float _minimumCircleRadius = 5.0f; // Minimum radius regardless of calculation
         public List<SlapfightAgentController> _deadFighters = new();
+        
+        // Victory scene
+        public CinemachineCamera VictoryCamera;
+        public VictoryUIController VictoryUIController;
 
 
         [SerializeField] private SlapfightAgentController _agentPrefab;
@@ -57,6 +62,10 @@ namespace bet_slum.Games.Slapfight
                 prefab => prefab.gameObject.SetActive(true),
                 prefab => prefab.gameObject.SetActive(false),
                 prefab => GameObject.Destroy(prefab.gameObject));
+
+            VictoryUIController.Initialize();
+            VictoryUIController.gameObject.SetActive(false);
+            VictoryCamera.gameObject.SetActive(false);
         }
 
         public async override Awaitable InitializeMatchEnvironment()
@@ -156,6 +165,25 @@ namespace bet_slum.Games.Slapfight
         public async override Awaitable EndMatch()
         {
             _running = false;
+
+            // let action breathe
+            await Task.Delay(1000);
+
+            // do cutscene shit here
+            // we want to go to victory podium (fly or cut/wipe?)
+            // show fighters in ranked order
+            // world ui showing their rank, expected XP, and expected bounty
+            // idle animations
+            // after x seconds, we reset the scene/goto intro
+            VictoryCamera.gameObject.SetActive(true);
+            await Task.Delay(1000);
+            VictoryUIController.gameObject.SetActive(true);
+            VictoryUIController.SetData(_fighters);
+
+            await Task.Delay(10000);
+
+            VictoryUIController.gameObject.SetActive(false);
+            VictoryCamera.gameObject.SetActive(false);
             await base.EndMatch();
         }
 
