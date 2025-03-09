@@ -3,6 +3,7 @@ using System.Linq;
 using System.Threading.Tasks;
 using Unity.Cinemachine;
 using UnityEngine;
+using UnityEngine.AI;
 using UnityEngine.Pool;
 
 namespace bet_slum.Games.Slapfight
@@ -36,7 +37,7 @@ namespace bet_slum.Games.Slapfight
 
         // NOTE - when we hit MaxAbilities, we'll need to shuffle/sort then Take(MaxAbilities) when creating fighter
         private const uint MaxAbilities = 32;
-        public override int MaxCompetitorCount => 6;
+        public override int MaxCompetitorCount => 3;//6;
 
         // fighter config
         public RuntimeAnimatorController FighterAnimatorController;
@@ -85,6 +86,7 @@ namespace bet_slum.Games.Slapfight
                 _agentPool.Release(fighter);
             }
             _fighters.Clear();
+            _deadFighters.Clear();
 
             await base.InitializeMatchCompetitors();
             if (_competitorData.competitionTeams.Count < MaxCompetitorCount)
@@ -112,6 +114,7 @@ namespace bet_slum.Games.Slapfight
                 
                 // Position fighter at the dynamically generated spawn position
                 Vector3 spawnPosition = spawnPositions[i];
+                _fighter.GetComponent<NavMeshAgent>().Warp(spawnPosition);
                 _fighter.transform.position = spawnPosition;
                 
                 // Calculate rotation to make fighter face the center
@@ -162,6 +165,7 @@ namespace bet_slum.Games.Slapfight
             base.StartMatch();
         }
 
+        public Transform VictorySpawnParent;
         public async override Awaitable EndMatch()
         {
             _running = false;
@@ -176,9 +180,29 @@ namespace bet_slum.Games.Slapfight
             // idle animations
             // after x seconds, we reset the scene/goto intro
             VictoryCamera.gameObject.SetActive(true);
+            // move fighrers to spawn points
+            // spawns are ordered by rank, so just order fighters then iterate and assign
+
+            // order by rank
+            var ranks = TeamRanks;
+            var sorted = new List<(uint, SlapfightAgentController)>();
+            for (int i = 0; i < _fighters.Count; i++)
+            {
+                sorted.Add((ranks[i], _fighters[i]));
+            }
+            sorted = sorted.OrderBy(x => x.Item1).ToList();
+            for (int i = 0; i < VictorySpawnParent.childCount && i < _fighters.Count; i++)
+            {
+                var spawn = VictorySpawnParent.GetChild(i);
+                sorted[i].Item2.GetComponent<NavMeshAgent>().Warp(spawn.position);
+                //_fighters[i].transform.position = spawn.position;
+                sorted[i].Item2.transform.rotation = spawn.rotation;
+            }
+
+
             await Task.Delay(1000);
             VictoryUIController.gameObject.SetActive(true);
-            VictoryUIController.SetData(_fighters);
+            VictoryUIController.SetData(_fighters, TeamRanks);
 
             await Task.Delay(10000);
 
@@ -267,6 +291,8 @@ namespace bet_slum.Games.Slapfight
             var target = _fighters[_fighters[_fighterTurnIndex].CurrentTargetIndex];
 
             target.SoloCamera.gameObject.SetActive(false);
+            // transition
+            await Task.Delay(250);
 
             _turnRunning = false;
         }

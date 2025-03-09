@@ -170,6 +170,7 @@ namespace bet_slum.Games.Slapfight
             // TODO - animate turn toward center
             transform.rotation = Quaternion.LookRotation((new Vector3(0, _spawnPosition.y, 0) - _spawnPosition).normalized, Vector3.up);
             
+
             await _matchRunner.EndTurn();
         }
 
