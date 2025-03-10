@@ -78,7 +78,7 @@ namespace bet_slum.Games.MapGame
             _isInitialized = true;
         }
 
-        public override void StartMatch()
+        public async override Awaitable StartMatch()
         {
             _running = true;
         }

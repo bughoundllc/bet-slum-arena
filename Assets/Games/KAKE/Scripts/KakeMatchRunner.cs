@@ -32,7 +32,7 @@ namespace bet_slum.kake
             await _runner.StartBettingPeriod();
         }
 
-        public override void StartMatch()
+        public async override Awaitable StartMatch()
         {
             Debug.Log("Starting match");
         }

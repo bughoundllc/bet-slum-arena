@@ -25,7 +25,7 @@ public class VictoryUIController: MonoBehaviour
 
 
     // TODO - rank order
-    public void SetData(List<SlapfightAgentController> fighters, Dictionary<int, uint> ranks)
+    public void SetData(List<SlapfightAgentController> fighters, Dictionary<int, uint> ranks, uint totalPayout)
     {
         foreach (var item in _items)
             _pool.Release(item);
@@ -39,7 +39,7 @@ public class VictoryUIController: MonoBehaviour
         }
         sorted = sorted.OrderBy(x => x.Item1).ToList();
 
-        PayoutLabel.SetText($"{sorted[0].Item2.Competitor.competitor.name} wins - {9999999999} payout");
+        PayoutLabel.SetText($"{sorted[0].Item2.Competitor.competitor.name} wins - {totalPayout} payout");
         foreach(var fighter in sorted)
         {
             var item = _pool.Get();

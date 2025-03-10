@@ -32,7 +32,7 @@ namespace bet_slum
             _competitorData = await _runner.GetCompetitors();
         }
 
-        public virtual void StartMatch() { }
+        public async virtual Awaitable StartMatch() { }
 
         public virtual async Awaitable EndMatch() 
         {

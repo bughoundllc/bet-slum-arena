@@ -8,7 +8,7 @@ public class FighterUIController : MonoBehaviour
 {
     public GameObject Prefab;
     private ObjectPool<GameObject> _prefabPool;
-    private Dictionary<SlapfightAgentController, GameObject> _items = new();
+    public Dictionary<SlapfightAgentController, GameObject> _items = new();
 
     private SlapfightMatchRunner _matchRunner;
     

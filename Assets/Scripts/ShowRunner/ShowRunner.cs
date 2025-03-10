@@ -11,7 +11,7 @@ namespace bet_slum
         protected MatchRunner _matchRunner;
 
         // Need a better way of handling sequencing between rounds - we'll want this to be variable eventually, driven by some sequence to allow for live, variable duration, etc
-        [SerializeField] private float _bettingPeriodDuration = 10f;
+        [SerializeField] private float _bettingPeriodDuration = 45f;
         [SerializeField] private float _postBettingStartDelaySeconds = 3f;
 
         public bool BettingIsEnabled => _bettingEnabled;
@@ -92,11 +92,11 @@ namespace bet_slum
             _bettingEnabled = false;
         }
 
-        protected virtual void StartRound()
+        protected async virtual Awaitable StartRound()
         {
             Debug.Log("SR: Starting Round");
 
-            _matchRunner.StartMatch();
+            await _matchRunner.StartMatch();
         }
 
         public virtual async Awaitable<GameCompetitionInfo> GetCompetitors()

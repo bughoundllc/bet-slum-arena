@@ -53,7 +53,7 @@ namespace bet_slum.CombatArena
         }
 
 
-        public override void StartMatch()
+        public async override Awaitable StartMatch()
         {
             Debug.Log("MR: Start Round");
             

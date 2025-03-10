@@ -129,7 +129,7 @@ namespace bet_slum.Games.Slapfight
             Debug.Log($"gonna popup {ability.ability.name}");
             
             //Debug.Log($"{_matchRunner._popup}");
-            _matchRunner._popup.Show($"{ability.ability.name} ({ability.ability.damage})", ability.statRequirements?.Select(r => (r.statDefinition.name, r.value)).ToList(), ability.itemRequirements?.Select(r => r.item.icon).ToList());
+            _matchRunner._popup.Show($"{ability.ability.name} <color=red>({ability.ability.damage})</color>", ability.statRequirements?.Select(r => (r.statDefinition.name, r.value)).ToList(), ability.itemRequirements?.Select(r => r.item.icon).ToList());
 
 
             Debug.Log($"firing use ability");

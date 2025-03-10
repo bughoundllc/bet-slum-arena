@@ -1,10 +1,14 @@
+using bet_slum.showRunner;
+using Newtonsoft.Json;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using TMPro;
 using Unity.Cinemachine;
 using UnityEngine;
 using UnityEngine.AI;
 using UnityEngine.Pool;
+using static Unity.Cinemachine.CinemachineSplineRoll;
 
 namespace bet_slum.Games.Slapfight
 {
@@ -15,7 +19,8 @@ namespace bet_slum.Games.Slapfight
         [SerializeField] private float _fighterSpacing = 0.5f; // Buffer space between fighters
         [SerializeField] private float _minimumCircleRadius = 5.0f; // Minimum radius regardless of calculation
         public List<SlapfightAgentController> _deadFighters = new();
-        
+
+        public GameObject totalPoolPanel;
         // Victory scene
         public CinemachineCamera VictoryCamera;
         public VictoryUIController VictoryUIController;
@@ -37,7 +42,7 @@ namespace bet_slum.Games.Slapfight
 
         // NOTE - when we hit MaxAbilities, we'll need to shuffle/sort then Take(MaxAbilities) when creating fighter
         private const uint MaxAbilities = 32;
-        public override int MaxCompetitorCount => 6;//6;
+        public override int MaxCompetitorCount => 5;//6;
 
         // fighter config
         public RuntimeAnimatorController FighterAnimatorController;
@@ -77,7 +82,55 @@ namespace bet_slum.Games.Slapfight
             await InitializeMatchCompetitors();
 
             await _runner.StartBettingPeriod();
+
+            // TODO get this OUTTA HERE
+            // start polling for bets, stop 
+            
+            _ = UpdatePotsContinuous();
         }
+
+        // TODO - move, shared w/ backend
+        public class BettingPoolsResponse
+        {
+            /// <summary>
+            /// The total number of teams in the competition.
+            /// </summary>
+            public int totalTeams;
+
+            /// <summary>
+            /// The total amount of bets across all teams.
+            /// </summary>
+            public decimal totalBetsAmount;
+
+            /// <summary>
+            /// A dictionary mapping team IDs to their respective betting pool amounts.
+            /// The key is the team ID and the value is the total amount bet on that team.
+            /// </summary>
+            public Dictionary<uint, decimal> teamPools;
+        }
+        private async Awaitable UpdatePotsContinuous()
+        {
+            while (_runner.BettingIsEnabled)
+            {
+                await UpdatePots();
+                await Task.Delay(500);
+            }
+        }
+        BettingPoolsResponse _lastPoolData;
+        private async Awaitable UpdatePots()
+        {
+            if (_runner is not LiveShowRunner) return;
+
+            var data = await NetworkController.GET("game", "betting-pools");
+            _lastPoolData = JsonConvert.DeserializeObject<BettingPoolsResponse>(data.Text);
+
+            totalPoolPanel.GetComponentInChildren<TMP_Text>().SetText($"{(uint)_lastPoolData.totalBetsAmount}");
+            for (int i = 0; i < FighterUIController._items.Count; i++)
+            {
+                FighterUIController._items[_fighters[i]].GetComponent<FighterInfoUI>().BetsLabel.SetText($"{(uint)_lastPoolData.teamPools[(uint)i]}");
+            }
+        }
+
 
         public async override Awaitable InitializeMatchCompetitors()
         {
@@ -87,6 +140,8 @@ namespace bet_slum.Games.Slapfight
             }
             _fighters.Clear();
             _deadFighters.Clear();
+            totalPoolPanel.SetActive(true);
+            totalPoolPanel.GetComponentInChildren<TMP_Text>().SetText($"0");
 
             await base.InitializeMatchCompetitors();
             if (_competitorData.competitionTeams.Count < MaxCompetitorCount)
@@ -136,8 +191,13 @@ namespace bet_slum.Games.Slapfight
                 
                 _fighters.Add(_fighter);
             }
-
+            FighterUIController.gameObject.SetActive(true);
             FighterUIController.Initialize(this);
+
+            var pools = new Dictionary<uint, decimal>();
+            for (uint i = 0; i < _fighters.Count; i++)
+                pools.Add(i, 0);
+            _lastPoolData = new BettingPoolsResponse { totalTeams = MaxCompetitorCount, teamPools = pools, totalBetsAmount = 0 };
         }
 
         // how does match flow go?
@@ -159,10 +219,14 @@ namespace bet_slum.Games.Slapfight
         private bool _turnRunning = false;
         private bool _endRoundFired = false;
         private int _fighterTurnIndex = 0;
-        public override void StartMatch()
+        public async override Awaitable StartMatch()
         {
+            await UpdatePots();
+            await Task.Delay(2000);
+
+            totalPoolPanel.SetActive(false);
             _running = true;
-            base.StartMatch();
+            await base.StartMatch();
         }
 
         public Transform VictorySpawnParent;
@@ -179,6 +243,8 @@ namespace bet_slum.Games.Slapfight
             // world ui showing their rank, expected XP, and expected bounty
             // idle animations
             // after x seconds, we reset the scene/goto intro
+
+            FighterUIController.gameObject.SetActive(false);
             VictoryCamera.gameObject.SetActive(true);
             // move fighrers to spawn points
             // spawns are ordered by rank, so just order fighters then iterate and assign
@@ -202,7 +268,7 @@ namespace bet_slum.Games.Slapfight
 
             await Task.Delay(1000);
             VictoryUIController.gameObject.SetActive(true);
-            VictoryUIController.SetData(_fighters, TeamRanks);
+            VictoryUIController.SetData(_fighters, TeamRanks, (uint)(_lastPoolData.totalBetsAmount - _lastPoolData.teamPools[(uint)WinnerID]));
 
             await Task.Delay(10000);
 

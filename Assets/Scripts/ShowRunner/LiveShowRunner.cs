@@ -59,10 +59,10 @@ namespace bet_slum.showRunner
             await base.EndBettingPeriod();
         }
 
-        protected override void StartRound()
+        protected async override Awaitable StartRound()
         {
             _roundEnded = false;
-            base.StartRound();
+            await base.StartRound();
         }
 
         public async override Awaitable OnMatchEnd(int winnerID)

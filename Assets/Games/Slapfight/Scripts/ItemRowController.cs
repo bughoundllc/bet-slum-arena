@@ -93,9 +93,8 @@ namespace bet_slum.Slapfight
                 _items.Add(go);
             }
 
-            LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
-
             gameObject.SetActive(_items.Count > 0);
+            LayoutRebuilder.ForceRebuildLayoutImmediate(GetComponent<RectTransform>());
         }
     }
 }

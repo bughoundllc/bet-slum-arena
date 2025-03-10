@@ -28,7 +28,20 @@ namespace bet_slum.UI
             }
 
             img.enabled = true;
-            _text.SetText($"/bet\n{math.max(0f,  _runner.RemainingBetDuration):F2}");
+            _text.SetText($"/bet\n{FormatTime(math.max(0f,  _runner.RemainingBetDuration))}");
+        }
+
+        string FormatTime(float seconds)
+        {
+            // Calculate minutes, seconds, and milliseconds
+            int totalMilliseconds = (int)(seconds * 1000);
+            int minutes = totalMilliseconds / 60000;
+            int remainingMilliseconds = totalMilliseconds % 60000;
+            int secs = remainingMilliseconds / 1000;
+            int millis = remainingMilliseconds % 1000;
+
+            // Format as MM:SS:LL (only showing first two digits of milliseconds)
+            return string.Format("{0:00}:{1:00}:{2:00}", minutes, secs, millis / 10);
         }
     }
 

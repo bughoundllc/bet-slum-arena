@@ -16,6 +16,7 @@ public class FighterInfoUI : MonoBehaviour
     public TMP_Text Stat2Label;
     public TMP_Text Stat3Label;
     public TMP_Text HPText;
+    public TMP_Text BetsLabel;
     [HideInInspector] public SlapfightAgentController fighterAgent;
 
     private void Update()
