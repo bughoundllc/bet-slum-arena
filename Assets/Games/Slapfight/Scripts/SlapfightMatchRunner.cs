@@ -318,6 +318,10 @@ namespace bet_slum.Games.Slapfight
                     }
                 }
 
+                // bactrs hacked in bullshit. todo: keep
+                Debug.Log("calling shit");
+                AudioManager.Instance.Slapfight_HandleBattleToScorescreenAudioTransition();
+
                 // this is bad
                 _endRoundFired = true;
                 await EndMatch(); // this IMMEDIATELY starts the next match

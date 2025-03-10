@@ -7,9 +7,8 @@ using UnityEngine;
 public class AudioManagerExample : MonoBehaviour
 {
     [Header("Audio Clips")]
-    [SerializeField] private AudioClip _backgroundMusic;
-    [SerializeField] private AudioClip _buttonClickSound;
-    [SerializeField] private AudioClip _explosionSound;
+    [SerializeField] private AudioClip _bettingAndBattleMusic;
+    [SerializeField] private AudioClip _scoreScreenMusic;
 
     [Header("Audio Settings")]
     [Range(0f, 1f)]
@@ -23,45 +22,6 @@ public class AudioManagerExample : MonoBehaviour
         // Set initial volumes
         AudioManager.Instance.SetMusicVolume(_musicVolume);
         AudioManager.Instance.SetSFXVolume(_sfxVolume);
-        
-        // Start background music
-        if (_backgroundMusic != null)
-        {
-            AudioManager.Instance.PlayMusic(_backgroundMusic, fadeTime: 2f);
-        }
-        else
-        {
-            // Example of using AudioUtility to play from Resources
-            AudioUtility.PlayMusic("Audio/Music/BackgroundTheme", fadeTime: 2f);
-        }
-    }
-
-    // Example method that could be called from a UI button
-    public void OnButtonClick()
-    {
-        if (_buttonClickSound != null)
-        {
-            AudioManager.Instance.PlaySFX(_buttonClickSound);
-        }
-        else
-        {
-            // Example of using AudioUtility to play from Resources
-            AudioUtility.PlaySFX("Audio/SFX/ButtonClick");
-        }
-    }
-
-    // Example method to play a 3D sound at a position
-    public void PlayExplosionAt(Vector3 position)
-    {
-        if (_explosionSound != null)
-        {
-            AudioManager.Instance.PlaySFXAtPosition(_explosionSound, position);
-        }
-        else
-        {
-            // Example of using AudioUtility to play from Resources
-            AudioUtility.PlaySFXAtPosition("Audio/SFX/Explosion", position);
-        }
     }
 
     // Example of how to use volume controls

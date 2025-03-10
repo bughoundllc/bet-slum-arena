@@ -83,6 +83,9 @@ namespace bet_slum
 
             _lastBetPeriodStart = Time.time;
             _bettingEnabled = true;
+
+            // bactrs hacked in bullshit. todo: keep
+            AudioManager.Instance.Slapfight_HandleScorescreenToBettingAudioTransition();
         }
 
         protected virtual async Awaitable EndBettingPeriod()

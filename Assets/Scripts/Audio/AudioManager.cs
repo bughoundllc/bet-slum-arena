@@ -53,6 +53,9 @@ public class AudioManager : MonoBehaviour
     // Currently playing background music
     private AudioSource _currentMusicSource;
 
+    [SerializeField] private AudioSource _betAndBattleMusic;
+    [SerializeField] private AudioSource _scorescreenMusic;
+
     private void Awake()
     {
         // Singleton pattern
@@ -94,6 +97,75 @@ public class AudioManager : MonoBehaviour
     }
 
     #region Public API
+
+    // bactrs hacked in bullshit. todo: keep
+    public void Slapfight_HandleScorescreenToBettingAudioTransition()
+    {
+        //PlayMusic(_betAndBattleMusic, fadeTime: 0f);
+        MeCrossfade(_betAndBattleMusic, _scorescreenMusic, 1f);
+    }
+
+    public void Slapfight_HandleBattleToScorescreenAudioTransition()
+    {
+        MeCrossfade(_scorescreenMusic, _betAndBattleMusic, 1f);
+    }
+
+    IEnumerator FadeOut1(AudioSource source, float fadeTime) 
+    {
+        float timeElapsed = 0f;
+
+        while (source.volume > 0) 
+        {
+            source.volume = Mathf.Lerp(1, 0, timeElapsed / fadeTime);
+            timeElapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    IEnumerator FadeIn1(AudioSource source, float fadeTime) 
+    {
+        float timeElapsed = 0f;
+        while (source.volume < 1) 
+        {
+            source.volume = Mathf.Lerp(0, 1, timeElapsed / fadeTime);
+            timeElapsed += Time.deltaTime;
+            yield return null;
+        }
+    }
+
+    private void MeCrossfade(AudioSource fadeInSource, AudioSource fadeOutSource, float fadeTime)
+    {
+        Debug.Log("Mecrossfade");
+
+        Debug.Log("fadeing out");
+        if (fadeOutSource != null && fadeOutSource.isPlaying)
+        {
+            StartCoroutine(FadeOut1(fadeOutSource, fadeTime));
+        }
+
+        if (fadeInSource != null)
+        {
+            Debug.Log("fadeing in");
+            fadeInSource.volume = 0f;
+            fadeInSource.Play();
+            StartCoroutine(FadeIn1(fadeInSource, fadeTime));
+        }
+        /*
+        // First look for an audio source that's not playing
+        foreach (AudioSource source in _musicSources)
+        {
+            if (source.isPlaying)
+            {
+                Debug.Log("found playing source");
+                StartCoroutine(FadeOut(source, fadeTime));
+                break;
+            }
+        }
+
+        Debug.Log("fading in");
+        StartCoroutine(FadeIn(destinationSource, fadeTime));
+        */
+    }
 
     /// <summary>
     /// Play a sound effect once.
@@ -248,6 +320,8 @@ public class AudioManager : MonoBehaviour
                 return source;
         }
 
+        Debug.Log("fdjshajklfhdjksagfhkalsdhjfka");
+
         // If all are playing, create a new one or return null
         return null;
     }
@@ -339,6 +413,22 @@ public class AudioManager : MonoBehaviour
 
         source.Stop();
         source.volume = startVolume;
+    }
+
+    private IEnumerator FadeIn(AudioSource source, float fadeTime)
+    {
+        Debug.Log($"Fade in. Source: {source == null}");
+        var startTime = Time.time;
+        float timer = 0f;
+
+        while (timer < fadeTime)
+        {
+            timer += Time.deltaTime;
+            var val = Mathf.Lerp(0f, 1f, (Time.time - startTime) / fadeTime);
+            Debug.Log($"Fade in val: {val}");
+            source.volume = val;
+            yield return null;
+        }
     }
 
     #endregion
