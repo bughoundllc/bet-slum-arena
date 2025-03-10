@@ -265,6 +265,7 @@ namespace bet_slum.Games.Slapfight
                 sorted[i].Item2.transform.rotation = spawn.rotation;
             }
 
+            AudioManager.Instance.PlayOneshot("zoom");
 
             await Task.Delay(1000);
             VictoryUIController.gameObject.SetActive(true);

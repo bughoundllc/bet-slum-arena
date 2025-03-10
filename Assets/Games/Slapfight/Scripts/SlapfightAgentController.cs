@@ -135,6 +135,7 @@ namespace bet_slum.Games.Slapfight
             Debug.Log($"firing use ability");
             Animator.SetTrigger("UseAbility");
             _attacking = true;
+            AudioManager.Instance.PlayOneshot("hit");
             while (_attacking)
             {
                 await Task.Delay(1);
@@ -147,7 +148,8 @@ namespace bet_slum.Games.Slapfight
             // probably shouldnt be handling this here uwu
             target.TakeDamage(ability.ability.damage);
             if (target.IsDead)
-            { 
+            {
+                AudioManager.Instance.PlayOneshot("jesse");
                 target.Animator.SetTrigger("Killed");
                 _matchRunner._deadFighters.Add(target);
             }

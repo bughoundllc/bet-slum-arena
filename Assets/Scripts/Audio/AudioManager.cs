@@ -55,6 +55,10 @@ public class AudioManager : MonoBehaviour
 
     [SerializeField] private AudioSource _betAndBattleMusic;
     [SerializeField] private AudioSource _scorescreenMusic;
+    [SerializeField] private AudioSource _oneshotSource;
+    [SerializeField] private List<AudioClip> _hits;
+    [SerializeField] private List<AudioClip> _screams;
+    [SerializeField] private AudioClip _zoomOut;
 
     private void Awake()
     {
@@ -110,13 +114,28 @@ public class AudioManager : MonoBehaviour
         MeCrossfade(_scorescreenMusic, _betAndBattleMusic, 1f);
     }
 
+    // todo do this not retarded
+    public void PlayOneshot(string type)
+    {
+        _oneshotSource.volume = 1f;
+        _oneshotSource.clip = type switch
+        {
+            "hit" => _hits[Random.Range(0, _hits.Count - 1)],
+            "jesse" => _screams[Random.Range(0, _screams.Count - 1)],
+            "zoom" => _zoomOut,
+            _ => _hits[Random.Range(0, _hits.Count - 1)]
+        };
+        _oneshotSource.Play();
+    }
+
+    // this is some real fuck you code im tired and dont care and remembering how unity works
     IEnumerator FadeOut1(AudioSource source, float fadeTime) 
     {
         float timeElapsed = 0f;
 
         while (source.volume > 0) 
         {
-            source.volume = Mathf.Lerp(1, 0, timeElapsed / fadeTime);
+            source.volume = Mathf.Lerp(0.75f, 0, timeElapsed / fadeTime);
             timeElapsed += Time.deltaTime;
             yield return null;
         }
@@ -125,9 +144,9 @@ public class AudioManager : MonoBehaviour
     IEnumerator FadeIn1(AudioSource source, float fadeTime) 
     {
         float timeElapsed = 0f;
-        while (source.volume < 1) 
+        while (source.volume < 0.75) 
         {
-            source.volume = Mathf.Lerp(0, 1, timeElapsed / fadeTime);
+            source.volume = Mathf.Lerp(0, 0.75f, timeElapsed / fadeTime);
             timeElapsed += Time.deltaTime;
             yield return null;
         }
