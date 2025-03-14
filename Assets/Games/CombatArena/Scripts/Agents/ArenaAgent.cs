@@ -26,7 +26,7 @@ namespace bet_slum.CombatArena.Agents
         public virtual void Initialize(Competitor competitor, Vector3 initialPosition, Quaternion initialRotation)
         {
             _competitor = competitor;
-            _nameDisplay?.SetText($"{_competitor.name}");
+            _nameDisplay?.SetText($"{_competitor.displayName}");
             gameObject.name = _competitor.name;
 
             transform.position = initialPosition;

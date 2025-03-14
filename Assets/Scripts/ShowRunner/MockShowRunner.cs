@@ -13,7 +13,7 @@ namespace bet_slum.showRunner
             var competitors = new List<GameCompetitionTeamData>();
             for(int i = 0; i < competitorCount; i++)
             {
-                var competitor = new Competitor { id = $"Competitor{i}", name = $"Competitor {i}" };
+                var competitor = new Competitor { id = $"Competitor{i}", name = $"Competitor {i}", displayName = $"Competitor {i}" };
                 competitors.Add(new GameCompetitionTeamData
                 {
                     competitors = new() { competitor },

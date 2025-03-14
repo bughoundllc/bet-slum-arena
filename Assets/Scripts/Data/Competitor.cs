@@ -10,6 +10,7 @@ namespace bet_slum.Data
         public const float MAX_LEVEL = 10f;
         public string id;
         public string name;
+        public string displayName;
     }
 
     public class CompetitorStat

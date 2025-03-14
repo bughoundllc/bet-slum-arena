@@ -16,7 +16,7 @@ public class VictoryCompetitorInfoController : MonoBehaviour
 
     public void SetData(CompetitorData data, uint rank, int totalTeams)
     {
-        NameLabel.SetText(data.competitor.name);
+        NameLabel.SetText(data.competitor.displayName);
         RankLabel.SetText((rank == 0 ? 1 : rank).ToString());
 
         // TODO - DUPLICATED FROM BACKEND

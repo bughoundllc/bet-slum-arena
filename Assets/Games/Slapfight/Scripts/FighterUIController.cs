@@ -36,7 +36,7 @@ public class FighterUIController : MonoBehaviour
             _items.Add(fighter, item);
             var fighterUI = item.GetComponent<FighterInfoUI>();
             fighterUI.fighterAgent = fighter;
-            fighterUI.NameLabel.SetText(fighter.Competitor.competitor.name);
+            fighterUI.NameLabel.SetText(fighter.Competitor.competitor.displayName);
             fighterUI.HPSlider.value = 1f;
             fighterUI.HPBackgroundSlider.value = 1f;
             fighterUI.itemRow.Refresh(fighter.Competitor.inventory);

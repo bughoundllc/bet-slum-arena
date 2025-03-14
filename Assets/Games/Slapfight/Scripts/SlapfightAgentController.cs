@@ -28,7 +28,7 @@ namespace bet_slum.Games.Slapfight
         public bool IsDead => HP <= 0f;
         public float HP;
         public float MaxHP;
-        private float _hpPerLevel = 150f;
+        private float _hpPerLevel = 100f;
 
         public int CurrentAbilityIndex = -1;
         public int CurrentTargetIndex = -1;
@@ -48,7 +48,7 @@ namespace bet_slum.Games.Slapfight
             _fighterIndex = fighterIndex;
             _agent = GetComponent<NavMeshAgent>();
             _spawnPosition = spawnPosition;
-            _nameLabel.SetText($"{competitorData.competitor.name}");
+            _nameLabel.SetText($"{competitorData.competitor.displayName}");
             _matchRunner = matchRunner;
             _competitorData = competitorData;
             MaxHP = competitorData.stats[0].value * _hpPerLevel;

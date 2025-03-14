@@ -39,7 +39,7 @@ public class VictoryUIController: MonoBehaviour
         }
         sorted = sorted.OrderBy(x => x.Item1).ToList();
 
-        PayoutLabel.SetText($"{sorted[0].Item2.Competitor.competitor.name} wins - {totalPayout} payout");
+        PayoutLabel.SetText($"{sorted[0].Item2.Competitor.competitor.displayName} wins - {totalPayout} payout");
         foreach(var fighter in sorted)
         {
             var item = _pool.Get();
